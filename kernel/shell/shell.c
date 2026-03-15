@@ -12,6 +12,7 @@
 #include "../drivers/pci.h"
 #include "../drivers/nvme.h"
 #include "../drivers/serial.h"
+#include "../drivers/gpu.h"
 #include "../arch/x86_64/mm/pmm.h"
 #include "../acpi/acpi.h"
 #include "../net/ethernet.h"
@@ -252,6 +253,7 @@ static void cmd_pomoc(void)
     fb_puts("  ping <ip>       - wyslij ping na adres IP\n");
     fb_puts("  dns <host>      - rozwiaz nazwe DNS\n");
     fb_puts("  pci             - lista urzadzen PCI\n");
+    fb_puts("  gpu             - informacje o kartach graficznych\n");
     fb_puts("  czas            - aktualny czas i data\n");
     fb_puts("  dysk            - informacje o dysku NVMe\n");
     fb_puts("  wyczysc         - wyczysc ekran\n");
@@ -362,6 +364,11 @@ static void cmd_dns(char *args[], int argc)
 static void cmd_pci(void)
 {
     pci_list_devices();
+}
+
+static void cmd_gpu(void)
+{
+    gpu_list_devices();
 }
 
 static void cmd_czas(void)
@@ -518,6 +525,8 @@ void shell_run(void)
             cmd_dns(args, argc);
         } else if (strcmp(cmd, "pci") == 0) {
             cmd_pci();
+        } else if (strcmp(cmd, "gpu") == 0) {
+            cmd_gpu();
         } else if (strcmp(cmd, "czas") == 0) {
             cmd_czas();
         } else if (strcmp(cmd, "dysk") == 0) {

@@ -20,6 +20,7 @@
 #include "drivers/nvme.h"
 #include "drivers/e1000.h"
 #include "drivers/speaker.h"
+#include "drivers/gpu.h"
 #include "acpi/acpi.h"
 #include "net/ethernet.h"
 #include "net/dhcp.h"
@@ -124,11 +125,10 @@ void kmain(void)
     fb_draw_boot_screen();
     kprintf("[INFO]   Ekran startowy wyswietlony\n");
 
-    // ── 5. Mazurek Dabrowskiego ───────────────────────────────────────────────
-    play_mazurek_dabrowskiego();
-    kprintf("[INFO]   Mazurek Dabrowskiego zagrany\n");
+    // NOTE: Mazurek Dabrowskiego moved after HPET + sti() — timer_sleep_ms()
+    //       requires working interrupts and an active HPET tick.
 
-    // ── 6. GDT ───────────────────────────────────────────────────────────────
+    // ── 5. GDT ───────────────────────────────────────────────────────────────
     gdt_init();
     kprintf("[DOBRZE] GDT zainicjalizowany\n");
 
@@ -196,6 +196,10 @@ void kmain(void)
     sti();
     kprintf("[DOBRZE] Przerwania wlaczone\n");
 
+    // ── 14a. Mazurek Dabrowskiego (needs working timer + interrupts) ──────────
+    play_mazurek_dabrowskiego();
+    kprintf("[INFO]   Mazurek Dabrowskiego zagrany\n");
+
     // ── 15. PCI ───────────────────────────────────────────────────────────────
     if (acpi_mcfg_phys) {
         pci_init(acpi_mcfg_phys, hhdm);
@@ -204,6 +208,9 @@ void kmain(void)
         pci_init(0, hhdm);  // 0 = use legacy I/O ports
     }
     kprintf("[DOBRZE] PCI: znaleziono %d urzadzen\n", pci_device_count);
+
+    // ── 15a. GPU detection ────────────────────────────────────────────────────
+    gpu_init();
 
     // ── 16. e1000 ─────────────────────────────────────────────────────────────
     int e1000_ok = e1000_init();
