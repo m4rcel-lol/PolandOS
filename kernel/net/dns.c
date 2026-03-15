@@ -43,50 +43,6 @@ static u16 dns_encode_name(const char *hostname, u8 *buf) {
     return pos;
 }
 
-// ---------------------------------------------------------------------------
-// Parse a DNS name from response (handles compression pointers 0xC0xx)
-// Returns number of bytes consumed from buf (not counting compression target).
-// ---------------------------------------------------------------------------
-static u16 dns_parse_name(const u8 *pkt, u16 pkt_len,
-                          u16 offset, char *out, u16 out_size) {
-    u16 pos    = offset;
-    u16 result = 0;
-    bool jumped = false;
-    u16 out_pos = 0;
-
-    while (pos < pkt_len) {
-        u8 len = pkt[pos];
-
-        if (len == 0) {
-            if (!jumped) result = pos + 1;
-            break;
-        }
-
-        if ((len & 0xC0) == 0xC0) {
-            // Compression pointer
-            if (pos + 1 >= pkt_len) break;
-            u16 ptr = (u16)(((len & 0x3F) << 8) | pkt[pos + 1]);
-            if (!jumped) result = pos + 2;
-            jumped = true;
-            pos = ptr;
-            continue;
-        }
-
-        pos++;
-        for (u8 i = 0; i < len && pos < pkt_len; i++, pos++) {
-            if (out_pos + 1 < out_size) {
-                out[out_pos++] = (char)pkt[pos];
-            }
-        }
-        if (out_pos < out_size) out[out_pos++] = '.';
-    }
-
-    if (out_pos > 0 && out[out_pos - 1] == '.') out_pos--;
-    if (out_pos < out_size) out[out_pos] = '\0';
-
-    return result;
-}
-
 // Incrementing transaction ID to prevent DNS cache poisoning
 static u16 dns_txid = 0x4F53;  // 'OS'
 
