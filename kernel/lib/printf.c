@@ -214,11 +214,6 @@ static int vfmt(PrintCtx *ctx, const char *fmt, va_list ap) {
                 total++;
                 break;
             }
-            case 'n': {
-                int *p = va_arg(ap, int *);
-                *p = total;
-                break;
-            }
             default: {
                 // Unknown specifier — emit literally
                 ctx_putchar(ctx, '%');

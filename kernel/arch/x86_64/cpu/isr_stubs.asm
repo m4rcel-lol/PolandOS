@@ -285,38 +285,26 @@ ISR_NOERRCODE 254
 ISR_NOERRCODE 255
 
 ; ─── Common stub ─────────────────────────────────────────────────────────────
-; Stack layout on entry (after ISR pushes int_no):
-;   [rsp+0]  = int_no
-;   [rsp+8]  = err_code (or dummy 0)  ← Wait, order reversed
+; Stack layout on entry to isr_common_stub (grows downward):
 ;
-; Actually our macros push: first dummy/0, then vector.
-; So on entry to isr_common_stub:
-;   [rsp+0]  = vector (int_no)
-;   [rsp+8]  = err_code / dummy
-;   [rsp+16] = RIP  (pushed by CPU)
+;   Pushed by our macros (top of stack):
+;   [rsp+0]  = int_no       (vector number)
+;   [rsp+8]  = err_code     (CPU error code, or dummy 0 pushed by ISR_NOERRCODE)
+;
+;   Pushed by the CPU on exception/interrupt:
+;   [rsp+16] = RIP
 ;   [rsp+24] = CS
 ;   [rsp+32] = RFLAGS
-;   [rsp+40] = RSP  (if privilege change)
+;   [rsp+40] = RSP          (only on privilege-level change)
 ;   [rsp+48] = SS
 ;
-; Wait — the CPU pushes: SS, RSP, RFLAGS, CS, RIP (top of stack = RIP)
-; Then error code (if any) is pushed by CPU.
-; Our macro:
-;   ISR_NOERRCODE: push 0 (dummy err_code), push int_no
-;   ISR_ERRCODE:   (err_code already on stack by CPU), push int_no
+; Macro summary:
+;   ISR_NOERRCODE: push 0 (dummy), push int_no  → stack as above
+;   ISR_ERRCODE:   CPU already pushed err_code, we push int_no
 ;
-; So stack before isr_common_stub:
-;   [rsp+0]  int_no
-;   [rsp+8]  err_code
-;   [rsp+16] RIP  (CPU)
-;   [rsp+24] CS
-;   [rsp+32] RFLAGS
-;   [rsp+40] RSP  (CPU, if CPL change)
-;   [rsp+48] SS
-;
-; We push all GP regs in REVERSE order to match InterruptFrame:
-;   r15, r14, r13, r12, r11, r10, r9, r8
-;   rdi, rsi, rbp, rdx, rcx, rbx, rax
+; We then save all GP registers to form an InterruptFrame struct in C:
+;   r15..r8, rdi, rsi, rbp, rdx, rcx, rbx, rax  (15 regs × 8 bytes)
+;   followed by int_no and err_code already on stack
 
 isr_common_stub:
     ; Save all general-purpose registers

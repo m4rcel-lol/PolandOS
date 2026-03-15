@@ -253,17 +253,14 @@ struct limine_kernel_file_request {
     struct limine_kernel_file_response *response;
 };
 
-// ─── Request magic IDs (Limine v6 common prefix) ─────────────────────────────
-// All request IDs consist of 4 uint64_t values:
-//   [0] = 0xc7b1dd30df4c8b88  (common magic 1) — NOTE: varies per request, see above
-//   The magic values above in each #define are the actual IDs for that request.
+// ─── Request magic IDs ────────────────────────────────────────────────────────
+// Each Limine request uses a unique pair of 64-bit magic values as its ID.
+// The IDs above (in each #define) are the actual unique magic values for that
+// specific request type — there is no single "common magic" shared across requests.
 //
 // To define a request variable:
 //   static volatile struct limine_framebuffer_request fb_req = {
 //       .id = LIMINE_FRAMEBUFFER_REQUEST,
 //       .revision = 0,
 //   };
-//
-// The common Limine v6 request magic prefix for all requests:
-#define LIMINE_COMMON_MAGIC 0xc7b1dd30df4c8b88ULL, 0x0a82e883a194f07bULL
 

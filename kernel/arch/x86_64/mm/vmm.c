@@ -16,6 +16,7 @@
 
 static u64 *kernel_pml4 = (u64 *)0;
 
+// NOTE: vmm_init requires hhdm_offset to already be set by pmm_init().
 static u64 *phys_to_virt(u64 phys) {
     return (u64 *)(phys + hhdm_offset);
 }

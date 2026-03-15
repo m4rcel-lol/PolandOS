@@ -133,6 +133,7 @@ void itoa(i64 val, char *buf, int base) {
     }
 }
 
+// strtok: NOT reentrant — uses static state; do not call from interrupt handlers
 char *strtok(char *str, const char *delim) {
     static char *saved = (char *)0;
     if (str) saved = str;
