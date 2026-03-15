@@ -35,6 +35,7 @@ KERNEL_SRCS := \
     kernel/drivers/nvme.c \
     kernel/drivers/e1000.c \
     kernel/drivers/speaker.c \
+    kernel/drivers/gpu.c \
     kernel/acpi/acpi.c \
     kernel/net/ethernet.c \
     kernel/net/arp.c \
@@ -123,6 +124,7 @@ run: iso nvme.img
 	    -M q35 \
 	    -m 512M \
 	    -bios $(OVMF) \
+	    -vga std \
 	    -drive file=$(ISO),format=raw,if=ide \
 	    -drive file=nvme.img,if=none,id=nvme0 \
 	    -device nvme,drive=nvme0,serial=deadbeef \
@@ -136,6 +138,7 @@ debug: iso nvme.img
 	    -M q35 \
 	    -m 512M \
 	    -bios $(OVMF) \
+	    -vga std \
 	    -drive file=$(ISO),format=raw,if=ide \
 	    -drive file=nvme.img,if=none,id=nvme0 \
 	    -device nvme,drive=nvme0,serial=deadbeef \
