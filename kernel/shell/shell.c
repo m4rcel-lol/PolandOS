@@ -20,6 +20,8 @@
 #include "../net/dns.h"
 #include "../services/service.h"
 #include "../installer/installer.h"
+#include "../fs/vfs.h"
+#include "../gui/desktop.h"
 #include "../../include/types.h"
 
 // ─── Kolory ───────────────────────────────────────────────────────────────────
@@ -260,6 +262,8 @@ static void cmd_pomoc(void)
     fb_puts("  hex <addr> <n>  - wyswietl zawartosc pamieci\n");
     fb_puts("  uslugi          - lista uslug systemowych\n");
     fb_puts("  instaluj        - zainstaluj system na dysku\n");
+    fb_puts("  pulpit          - uruchom pulpit graficzny\n");
+    fb_puts("  ls [sciezka]    - wyswietl zawartosc katalogu VFS\n");
 }
 
 static void cmd_info(void)
@@ -549,6 +553,18 @@ void shell_run(void)
             svc_print_status();
         } else if (strcmp(cmd, "instaluj") == 0) {
             installer_run();
+        } else if (strcmp(cmd, "pulpit") == 0) {
+            fb_set_color(COLOR_YELLOW, COLOR_BLACK);
+            fb_puts("Uruchamianie pulpitu graficznego...\n");
+            desktop_run();
+        } else if (strcmp(cmd, "ls") == 0) {
+            const char *path = (argc >= 2) ? args[1] : "/";
+            VFSNode *node = vfs_lookup(path);
+            if (node) {
+                vfs_list_dir(node);
+            } else {
+                print_colored("Nie znaleziono sciezki\n", COLOR_RED);
+            }
         } else {
             fb_set_color(COLOR_RED, COLOR_BLACK);
             kprintf("Nieznane polecenie: %s.", cmd);

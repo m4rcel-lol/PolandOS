@@ -29,6 +29,7 @@ KERNEL_SRCS := \
     kernel/drivers/serial.c \
     kernel/drivers/fb.c \
     kernel/drivers/keyboard.c \
+    kernel/drivers/mouse.c \
     kernel/drivers/timer.c \
     kernel/drivers/rtc.c \
     kernel/drivers/pci.c \
@@ -37,6 +38,7 @@ KERNEL_SRCS := \
     kernel/drivers/speaker.c \
     kernel/drivers/gpu.c \
     kernel/acpi/acpi.c \
+    kernel/fs/vfs.c \
     kernel/net/ethernet.c \
     kernel/net/arp.c \
     kernel/net/ipv4.c \
@@ -45,6 +47,9 @@ KERNEL_SRCS := \
     kernel/net/tcp.c \
     kernel/net/dhcp.c \
     kernel/net/dns.c \
+    kernel/gui/window.c \
+    kernel/gui/desktop.c \
+    kernel/gui/widget.c \
     kernel/shell/shell.c \
     kernel/services/service.c \
     kernel/installer/installer.c \
