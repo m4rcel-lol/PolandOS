@@ -27,7 +27,7 @@ _start:
 section .bss
 align 16
 kernel_stack:
-    resb 65536  ; 64K stack
+    resb 131072  ; 128K stack
 kernel_stack_top:
 
 section .note.GNU-stack noalloc noexec nowrite progbits

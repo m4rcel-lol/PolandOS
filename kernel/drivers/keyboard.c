@@ -2,9 +2,11 @@
 #include "keyboard.h"
 #include "../../include/io.h"
 #include "../arch/x86_64/cpu/apic.h"
+#include "../arch/x86_64/cpu/idt.h"
 
 #define KB_DATA_PORT   0x60
 #define KB_STATUS_PORT 0x64
+#define KB_IRQ_VECTOR  33   // IRQ1 → vector 33 (32 + 1)
 
 // ─── Scancode Set 1 → ASCII translation tables ───────────────────────────────
 static const char scan_to_ascii[128] = {
@@ -66,12 +68,13 @@ static int kb_pop(char *c) {
     return 1;
 }
 
-// ─── IRQ Handler ──────────────────────────────────────────────────────────────
-void kb_irq_handler(void) {
+// ─── IRQ Handler (called from IDT common stub, which handles EOI) ─────────────
+void kb_irq_handler(InterruptFrame *frame) {
+    (void)frame;
     u8 sc = inb(KB_DATA_PORT);
 
     // Extended prefix
-    if (sc == 0xE0) { e0_prefix = 1; apic_send_eoi(); return; }
+    if (sc == 0xE0) { e0_prefix = 1; return; }
 
     int released = (sc & 0x80) != 0;
     u8  key = sc & 0x7F;
@@ -86,21 +89,18 @@ void kb_irq_handler(void) {
             if (key == 0x4B) { kb_push('\x1B'); kb_push('['); kb_push('D'); } // Left
             if (key == 0x1C) kb_push('\n'); // numpad enter
         }
-        apic_send_eoi();
         return;
     }
 
     // Shift keys: left=0x2A, right=0x36
     if (key == 0x2A || key == 0x36) {
         shift_held = !released;
-        apic_send_eoi();
         return;
     }
 
     // Caps Lock: 0x3A (toggle on press)
     if (key == 0x3A && !released) {
         caps_lock = !caps_lock;
-        apic_send_eoi();
         return;
     }
 
@@ -116,14 +116,27 @@ void kb_irq_handler(void) {
         }
         if (c) kb_push(c);
     }
-
-    apic_send_eoi();
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 void kb_init(void) {
-    // Flush output buffer
+    // Disable PS/2 devices while configuring
+    while (inb(KB_STATUS_PORT) & 0x02) io_wait();
+    outb(KB_STATUS_PORT, 0xAD); // disable first PS/2 port
+    io_wait();
+    outb(KB_STATUS_PORT, 0xA7); // disable second PS/2 port (if present)
+    io_wait();
+
+    // Flush any stale bytes in the output buffer
     while (inb(KB_STATUS_PORT) & 0x01) inb(KB_DATA_PORT);
+
+    // Re-enable first PS/2 port (keyboard)
+    while (inb(KB_STATUS_PORT) & 0x02) io_wait();
+    outb(KB_STATUS_PORT, 0xAE);
+    io_wait();
+
+    // Register IRQ handler in IDT (vector 33 = IRQ1 + 32)
+    idt_register_handler(KB_IRQ_VECTOR, kb_irq_handler);
     // Enable keyboard IRQ1 via I/O APIC
     ioapic_unmask_irq(1);
 }

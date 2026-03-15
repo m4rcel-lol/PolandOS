@@ -21,3 +21,4 @@ void vmm_map(u64 virt, u64 phys, u64 flags);
 void vmm_unmap(u64 virt);
 u64  vmm_get_phys(u64 virt);
 u64 *vmm_get_pml4(void);
+void vmm_map_region(u64 virt, u64 size, u64 flags); // alloc phys + map a VA region

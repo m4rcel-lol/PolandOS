@@ -4,6 +4,7 @@
 
 #include <stddef.h>
 #include "../include/limine.h"
+#include "../include/io.h"
 #include "arch/x86_64/cpu/gdt.h"
 #include "arch/x86_64/cpu/idt.h"
 #include "arch/x86_64/cpu/apic.h"
@@ -62,15 +63,26 @@ static volatile struct limine_kernel_address_request kaddr_request = {
     .revision = 0,
 };
 
-// ─── sti/cli inline ───────────────────────────────────────────────────────────
-
-static inline void sti(void)  { __asm__ volatile("sti"); }
-static inline void cli(void)  { __asm__ volatile("cli"); }
-static inline void hlt(void)  { __asm__ volatile("hlt"); }
-
 // ─── Kernel Heap Address ─────────────────────────────────────────────────────
 #define KERNEL_HEAP_START  0xFFFF900000000000ULL
 #define KERNEL_HEAP_SIZE   (64ULL * 1024ULL * 1024ULL)  // 64 MB
+
+// ─── Exception handlers ───────────────────────────────────────────────────────
+
+static void page_fault_handler(InterruptFrame *frame) {
+    u64 cr2 = read_cr2();
+    kpanic("Blad strony (#PF)\n"
+           "  Adres: 0x%llx  Kod: 0x%llx\n"
+           "  RIP: 0x%llx  RSP: 0x%llx\n",
+           cr2, frame->err_code, frame->rip, frame->rsp);
+}
+
+static void gpf_handler(InterruptFrame *frame) {
+    kpanic("Naruszenie ogolne ochrony (#GP)\n"
+           "  Selektor/kod: 0x%llx\n"
+           "  RIP: 0x%llx  RSP: 0x%llx\n",
+           frame->err_code, frame->rip, frame->rsp);
+}
 
 // ─── kmain ───────────────────────────────────────────────────────────────────
 
@@ -122,8 +134,9 @@ void kmain(void)
 
     // ── 7. IDT ───────────────────────────────────────────────────────────────
     idt_init();
+    idt_register_handler(13, gpf_handler);
+    idt_register_handler(14, page_fault_handler);
     kprintf("[DOBRZE] IDT zainicjalizowany\n");
-
     // ── 8. PMM ────────────────────────────────────────────────────────────────
     u64 hhdm = hhdm_request.response->offset;
     struct limine_memmap_response *mm = memmap_request.response;
@@ -150,7 +163,14 @@ void kmain(void)
     vmm_init(hhdm, kernel_phys, kernel_virt, kernel_size);
     kprintf("[DOBRZE] VMM zainicjalizowany (HHDM=0x%llx)\n", hhdm);
 
+    // ── 9a. IST stacks (double-fault needs a known-good stack) ───────────────
+    gdt_setup_ist_stacks();
+    kprintf("[DOBRZE] GDT: IST stack skonfigurowany\n");
+
     // ── 10. Heap ──────────────────────────────────────────────────────────────
+    // Map the heap virtual address range before initialising the heap allocator
+    vmm_map_region(KERNEL_HEAP_START, KERNEL_HEAP_SIZE,
+                   PAGE_PRESENT | PAGE_WRITE | PAGE_GLOBAL);
     heap_init(KERNEL_HEAP_START, KERNEL_HEAP_SIZE);
     kprintf("[DOBRZE] Sterta jadra: 0x%llx, %llu MB\n",
             KERNEL_HEAP_START, KERNEL_HEAP_SIZE / (1024ULL * 1024ULL));
@@ -179,10 +199,11 @@ void kmain(void)
     // ── 15. PCI ───────────────────────────────────────────────────────────────
     if (acpi_mcfg_phys) {
         pci_init(acpi_mcfg_phys, hhdm);
-        kprintf("[DOBRZE] PCI: znaleziono %d urzadzen\n", pci_device_count);
     } else {
-        kprintf("[UWAGA]  Brak MCFG — inicjalizacja PCI pominieta\n");
+        kprintf("[INFO]   Brak MCFG — PCI przez porty I/O (CF8/CFC)\n");
+        pci_init(0, hhdm);  // 0 = use legacy I/O ports
     }
+    kprintf("[DOBRZE] PCI: znaleziono %d urzadzen\n", pci_device_count);
 
     // ── 16. e1000 ─────────────────────────────────────────────────────────────
     int e1000_ok = e1000_init();
@@ -226,7 +247,11 @@ void kmain(void)
         }
     }
 
-    // ── 21. Shell ─────────────────────────────────────────────────────────────
+    // ── 21. Keyboard ─────────────────────────────────────────────────────────
+    kb_init();
+    kprintf("[DOBRZE] Klawiatura PS/2 zainicjalizowana\n");
+
+    // ── 22. Shell ─────────────────────────────────────────────────────────────
     kprintf("[DOBRZE] Uruchamianie powloki systemowej...\n");
     shell_run();  // never returns
 

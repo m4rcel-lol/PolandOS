@@ -1,6 +1,7 @@
 // PolandOS — GDT (Global Descriptor Table) dla x86-64
 // 7 deskryptorów: null, kernel code, kernel data, user data, user code, TSS low, TSS high
 #include "gdt.h"
+#include "../mm/pmm.h"
 #include "../../../lib/string.h"
 
 // ─── Structures ──────────────────────────────────────────────────────────────
@@ -113,4 +114,14 @@ void gdt_init(void) {
 
 void gdt_set_tss_rsp0(u64 rsp0) {
     tss_entry.rsp[0] = rsp0;
+}
+
+void gdt_setup_ist_stacks(void) {
+    // Allocate a dedicated stack for the double-fault handler (IST1).
+    // 4 pages = 16 KB — accessed through HHDM which vmm_init has already mapped.
+    u64 phys = pmm_alloc_pages(4);
+    if (phys) {
+        // Stack grows down; point IST entry at the top of the allocated region
+        tss_entry.ist[0] = phys + hhdm_offset + (4 * 4096);
+    }
 }

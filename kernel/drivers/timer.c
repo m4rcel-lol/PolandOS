@@ -120,8 +120,14 @@ void hpet_init(u64 hpet_phys, u64 hhdm) {
 
     hpet_write(HPET_TN_CFG(0), t0cfg);
 
-    // Write period (comparator accumulator) — sets the repeat interval
+    // Write the initial comparator value (first fire time = period, since counter starts at 0)
     hpet_write(HPET_TN_CMP(0), hpet_period);
+    // Write period again to load the interval accumulator for subsequent fires
+    hpet_write(HPET_TN_CMP(0), hpet_period);
+
+    // Clear VAL_SET now that the accumulator is loaded
+    t0cfg &= ~HPET_TN_VAL_SET;
+    hpet_write(HPET_TN_CFG(0), t0cfg);
 
     // Register IDT handler
     idt_register_handler(HPET_VECTOR, hpet_irq_handler);

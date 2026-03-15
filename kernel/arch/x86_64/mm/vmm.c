@@ -92,6 +92,16 @@ u64 vmm_get_phys(u64 virt) {
 
 u64 *vmm_get_pml4(void) { return kernel_pml4; }
 
+// Allocate physical frames and map a contiguous virtual region
+void vmm_map_region(u64 virt, u64 size, u64 flags) {
+    u64 aligned_size = (size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+    for (u64 off = 0; off < aligned_size; off += PAGE_SIZE) {
+        u64 phys = pmm_alloc();
+        if (!phys) kpanic("vmm_map_region: brak pamieci fizycznej!\n");
+        vmm_map(virt + off, phys, flags);
+    }
+}
+
 void vmm_init(u64 hhdm_off, u64 kernel_phys, u64 kernel_virt, u64 kernel_size) {
     // hhdm_offset should already be set by pmm_init, but just in case
     (void)hhdm_off;
@@ -101,9 +111,13 @@ void vmm_init(u64 hhdm_off, u64 kernel_phys, u64 kernel_virt, u64 kernel_size) {
     if (!pml4_phys) kpanic("VMM: nie mozna przydzielic PML4!\n");
     kernel_pml4 = phys_to_virt(pml4_phys);
 
-    // Map HHDM: all physical memory accessible at hhdm_offset
-    // Use 2MB pages (huge) for efficiency — map first 4GB
-    u64 hhdm_map_size = 4ULL * 1024 * 1024 * 1024; // 4 GB
+    // Map HHDM: cover all physical memory seen in the memory map.
+    // Use 2MB pages (huge) for efficiency.
+    // Minimum 4 GB, rounded up to next 2MB boundary.
+    u64 max_phys = pmm_get_max_phys();
+    if (max_phys < 4ULL * 1024 * 1024 * 1024)
+        max_phys = 4ULL * 1024 * 1024 * 1024;
+    u64 hhdm_map_size = (max_phys + 0x1FFFFFULL) & ~0x1FFFFFULL; // round to 2MB
     for (u64 phys = 0; phys < hhdm_map_size; phys += 0x200000) {
         u64 virt = phys + hhdm_offset;
         u64 *pdpt = get_or_create_table(kernel_pml4, PML4_IDX(virt), PAGE_WRITE | PAGE_PRESENT);

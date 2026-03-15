@@ -9,4 +9,5 @@ u64   pmm_alloc_pages(u64 count); // contiguous pages
 u64   pmm_total_bytes(void);
 u64   pmm_used_bytes(void);
 u64   pmm_free_bytes(void);
+u64   pmm_get_max_phys(void); // highest physical address in memmap
 extern u64 hhdm_offset;

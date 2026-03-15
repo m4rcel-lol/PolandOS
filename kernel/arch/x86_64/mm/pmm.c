@@ -1,19 +1,13 @@
 // PolandOS — Physical Memory Manager (Bitmap PMM)
 // Zarządza 4K ramkami fizycznymi za pomocą mapy bitowej
 #include "pmm.h"
+#include "limine.h"
 #include "../../../lib/string.h"
 #include "../../../lib/printf.h"
 #include "../../../lib/panic.h"
 
 #define PAGE_SIZE 4096ULL
 #define BITS_PER_BYTE 8
-
-// ─── Internal memmap entry (matches Limine layout) ───────────────────────────
-typedef struct {
-    u64 base;
-    u64 length;
-    u64 type;
-} MemmapEntry;
 
 // ─── PMM state ───────────────────────────────────────────────────────────────
 u64 hhdm_offset = 0;
@@ -23,6 +17,7 @@ static u64  bitmap_frames = 0;   // total number of frames tracked
 static u64  total_mem  = 0;
 static u64  used_mem   = 0;
 static u64  last_free  = 0;      // hint: last known free frame index
+static u64  max_phys   = 0;      // highest physical address seen in memmap
 
 // ─── Bitmap helpers ──────────────────────────────────────────────────────────
 static inline void bitmap_set(u64 frame) {
@@ -40,15 +35,20 @@ static inline int bitmap_test(u64 frame) {
 // ─── pmm_init ────────────────────────────────────────────────────────────────
 void pmm_init(void *memmap_entries, u64 count, u64 hhdm_off) {
     hhdm_offset = hhdm_off;
-    MemmapEntry *entries = (MemmapEntry *)memmap_entries;
+    // Limine provides an array of *pointers* to entries, not a flat struct array
+    struct limine_memmap_entry **entries =
+        (struct limine_memmap_entry **)memmap_entries;
 
     // Find the highest usable address to determine bitmap size
     u64 highest_addr = 0;
     for (u64 i = 0; i < count; i++) {
-        if (entries[i].type == 0) { // USABLE
-            u64 end = entries[i].base + entries[i].length;
+        if (entries[i]->type == LIMINE_MEMMAP_USABLE) {
+            u64 end = entries[i]->base + entries[i]->length;
             if (end > highest_addr) highest_addr = end;
         }
+        // Track overall highest address across all types for HHDM mapping
+        u64 any_end = entries[i]->base + entries[i]->length;
+        if (any_end > max_phys) max_phys = any_end;
     }
 
     bitmap_frames = (highest_addr + PAGE_SIZE - 1) / PAGE_SIZE;
@@ -59,8 +59,9 @@ void pmm_init(void *memmap_entries, u64 count, u64 hhdm_off) {
     // Find a usable region large enough to hold the bitmap
     bitmap = (u8 *)0;
     for (u64 i = 0; i < count; i++) {
-        if (entries[i].type == 0 && entries[i].length >= bitmap_size) {
-            bitmap = (u8 *)(entries[i].base + hhdm_offset);
+        if (entries[i]->type == LIMINE_MEMMAP_USABLE &&
+            entries[i]->length >= bitmap_size) {
+            bitmap = (u8 *)(entries[i]->base + hhdm_offset);
             break;
         }
     }
@@ -74,10 +75,10 @@ void pmm_init(void *memmap_entries, u64 count, u64 hhdm_off) {
 
     // Accumulate total usable memory and free usable pages
     for (u64 i = 0; i < count; i++) {
-        if (entries[i].type == 0) { // USABLE
-            total_mem += entries[i].length;
-            u64 frame_start = entries[i].base / PAGE_SIZE;
-            u64 frame_count = entries[i].length / PAGE_SIZE;
+        if (entries[i]->type == LIMINE_MEMMAP_USABLE) {
+            total_mem += entries[i]->length;
+            u64 frame_start = entries[i]->base / PAGE_SIZE;
+            u64 frame_count = entries[i]->length / PAGE_SIZE;
             for (u64 f = frame_start; f < frame_start + frame_count; f++) {
                 if (f < bitmap_frames) {
                     bitmap_clear(f);
@@ -171,6 +172,7 @@ u64 pmm_alloc_pages(u64 count) {
 }
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
-u64 pmm_total_bytes(void) { return total_mem; }
-u64 pmm_used_bytes(void)  { return used_mem;  }
-u64 pmm_free_bytes(void)  { return total_mem > used_mem ? total_mem - used_mem : 0; }
+u64 pmm_total_bytes(void)   { return total_mem; }
+u64 pmm_used_bytes(void)    { return used_mem;  }
+u64 pmm_free_bytes(void)    { return total_mem > used_mem ? total_mem - used_mem : 0; }
+u64 pmm_get_max_phys(void)  { return max_phys; }

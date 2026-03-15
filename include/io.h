@@ -45,6 +45,9 @@ static inline u64 read_cr3(void) {
 static inline void write_cr3(u64 v) {
     __asm__ volatile("mov %0, %%cr3" :: "r"(v) : "memory");
 }
+static inline u64 read_cr2(void) {
+    u64 v; __asm__ volatile("mov %%cr2, %0" : "=r"(v)); return v;
+}
 static inline void invlpg(u64 addr) {
     __asm__ volatile("invlpg (%0)" :: "r"(addr) : "memory");
 }
