@@ -12,7 +12,6 @@ typedef struct {
     u8  prog_if;
     u8  bus, slot, func;
     u64 bar0;
-    u64 fb_size;
     const char *type_name;
     const char *vendor_name;
 } GPUDevice;

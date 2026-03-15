@@ -63,7 +63,6 @@ void gpu_init(void) {
         gpu->slot        = pdev->slot;
         gpu->func        = pdev->func;
         gpu->bar0        = pci_get_bar_addr(pdev->bus, pdev->slot, pdev->func, 0);
-        gpu->fb_size     = 0;
         gpu->type_name   = gpu_subclass_name(pdev->subclass);
         gpu->vendor_name = gpu_vendor_name(pdev->vendor_id);
 
@@ -77,7 +76,7 @@ void gpu_init(void) {
     if (gpu_device_count == 0) {
         kprintf("[INFO]   GPU: brak kontrolera graficznego na szynie PCI\n");
     } else {
-        kprintf("[DOBRZE] GPU: znaleziono %d kart(e) graficzn(a/e/ych)\n",
+        kprintf("[DOBRZE] GPU: znaleziono %d urzadzen graficznych\n",
                 gpu_device_count);
     }
 }
