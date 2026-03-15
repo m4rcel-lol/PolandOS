@@ -83,9 +83,11 @@ iso: $(TARGET)
 	@if [ ! -f limine/limine ]; then \
 	    echo "  Pobieranie Limine..."; \
 	    mkdir -p limine; \
-	    curl -sL https://github.com/limine-bootloader/limine/releases/download/v6.20231116.0/limine-6.20231116.0.tar.gz \
+	    curl -sL https://github.com/limine-bootloader/limine/archive/refs/tags/v7.13.3-binary.tar.gz \
 	        | tar -xz --strip-components=1 -C limine || \
 	    (echo "  Blad pobierania Limine — zainstaluj recznie do katalogu limine/" && exit 1); \
+	    $(MAKE) -C limine || \
+	    (echo "  Blad kompilacji Limine" && exit 1); \
 	fi
 	@# Create directory structure
 	mkdir -p iso_root/boot/limine
