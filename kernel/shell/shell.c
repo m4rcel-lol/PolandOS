@@ -224,7 +224,6 @@ static void shell_readline(char *buf, int maxlen)
 }
 
 // ─── Parser argumentów ────────────────────────────────────────────────────────
-#define ARGS_MAX 16
 static int parse_args(char *line, char *args[], int max_args)
 {
     int count = 0;
