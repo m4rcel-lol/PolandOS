@@ -70,6 +70,8 @@ PolandOS/
 ├── linker.ld                          # Skrypt linkera (higher-half)
 ├── limine.conf                        # Konfiguracja bootloadera
 ├── Makefile                           # System budowania
+├── build.sh                           # Skrypt budowania (Arch Linux)
+├── burn.sh                            # Nagrywanie ISO na pendrive (Arch Linux)
 ├── README_PL.md                       # Ten plik
 └── TESTING.md                         # Przewodnik testowania
 ```
@@ -99,6 +101,18 @@ make run     # uruchomienie w QEMU
 make debug   # debugowanie z GDB (QEMU zatrzymuje się na starcie)
 make clean   # czyszczenie plików pośrednich
 ```
+
+### Nagrywanie na pendrive (Arch Linux)
+
+Użyj skryptu `burn.sh`, aby nagrać obraz ISO na pendrive USB:
+
+```bash
+sudo ./burn.sh              # Interaktywny — wyświetla listę urządzeń USB
+sudo ./burn.sh /dev/sdX     # Nagraj bezpośrednio na /dev/sdX (wymaga potwierdzenia)
+```
+
+Skrypt automatycznie buduje ISO, jeśli `polandos.iso` nie istnieje.
+**Uwaga:** Wszystkie dane na wybranym pendrive zostaną usunięte!
 
 ### Zmienne budowania
 

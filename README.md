@@ -130,6 +130,7 @@ PolandOS/
 ├── limine.conf                        # Bootloader configuration
 ├── Makefile                           # Build system
 ├── build.sh                           # Arch Linux build helper
+├── burn.sh                            # Burn ISO to USB (Arch Linux)
 ├── README.md                          # This file
 ├── README_PL.md                       # Polish documentation
 └── TESTING.md                         # Testing guide
@@ -174,6 +175,18 @@ make run          # Build + run in QEMU
 make debug        # Build + run with GDB stub (-s -S)
 make clean        # Remove build artefacts
 ```
+
+### Burn to USB (Arch Linux)
+
+Use the included `burn.sh` helper to write the ISO to a USB drive:
+
+```bash
+sudo ./burn.sh              # Interactive — lists USB devices and prompts
+sudo ./burn.sh /dev/sdX     # Burn directly to /dev/sdX (still asks confirmation)
+```
+
+The script builds the ISO automatically if `polandos.iso` does not exist.
+**Warning:** This erases all data on the selected USB drive!
 
 You can override the cross-compiler prefix:
 ```bash
