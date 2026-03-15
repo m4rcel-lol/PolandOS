@@ -312,7 +312,7 @@ int e1000_init(void) {
     // Enable RXT0 + TXDW + LSC interrupts
     e1000_write(E1000_IMS, E1000_ICR_RXT0 | E1000_ICR_TXDW | E1000_ICR_LSC);
 
-    kprintf("[DOBRZE] e1000: inicjalizacja zakonczona, IRQ%u -> vector 0x%x\n",
+    kprintf("[DOBRZE] e1000: inicjalizacja zakończona, IRQ%u -> vector 0x%x\n",
             irq, E1000_IRQ_VECTOR);
     return 0;
 }

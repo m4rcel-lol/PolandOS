@@ -208,7 +208,7 @@ void pci_init(u64 mcfg_base, u64 hhdm) {
         }
     }
 
-    kprintf("[DOBRZE] PCI: znaleziono %d urzadzen\n", pci_device_count);
+    kprintf("[DOBRZE] PCI: znaleziono %d urządzeń\n", pci_device_count);
 }
 
 // ─── List all devices ─────────────────────────────────────────────────────────
@@ -233,7 +233,7 @@ static const char *pci_class_name(u8 class_code) {
 }
 
 void pci_list_devices(void) {
-    kprintf("[PCI] Lista urzadzen (%d):\n", pci_device_count);
+    kprintf("[PCI] Lista urządzeń (%d):\n", pci_device_count);
     for (int i = 0; i < pci_device_count; i++) {
         PCIDevice *d = &pci_devices[i];
         kprintf("  [%02x:%02x.%x] %04x:%04x cls=%02x.%02x (%s) IRQ=%u\n",

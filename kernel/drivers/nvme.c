@@ -248,7 +248,7 @@ int nvme_init(void) {
     while (nvme_readl(NVME_CSTS) & NVME_CSTS_RDY) {
         cpu_relax();
         if (--timeout == 0) {
-            kprintf("[BLAD] NVMe: timeout oczekiwania na wylaczenie!\n");
+            kprintf("[BLAD] NVMe: timeout oczekiwania na wyłączenie!\n");
             return -1;
         }
     }
@@ -282,11 +282,11 @@ int nvme_init(void) {
             return -1;
         }
         if (--timeout == 0) {
-            kprintf("[BLAD] NVMe: timeout oczekiwania na gotowos!\n");
+            kprintf("[BLAD] NVMe: timeout oczekiwania na gotowość!\n");
             return -1;
         }
     }
-    kprintf("[DOBRZE] NVMe: kontroler wlaczony\n");
+    kprintf("[DOBRZE] NVMe: kontroler włączony\n");
 
     // Identify Controller (CNS=1): just to verify it works
     u64 id_phys = pmm_alloc();
@@ -371,7 +371,7 @@ int nvme_init(void) {
         return -1;
     }
 
-    kprintf("[DOBRZE] NVMe: inicjalizacja zakonczona\n");
+    kprintf("[DOBRZE] NVMe: inicjalizacja zakończona\n");
     return 0;
 }
 

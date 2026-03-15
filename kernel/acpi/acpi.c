@@ -152,12 +152,12 @@ void acpi_init(u64 rsdp_phys, u64 hhdm) {
     RSDP *rsdp = (RSDP *)phys_to_virt(rsdp_phys);
 
     if (memcmp(rsdp->signature, "RSD PTR ", 8) != 0) {
-        kprintf("[BLAD] ACPI: nieprawidlowy podpis RSDP!\n");
+        kprintf("[BLAD] ACPI: nieprawidłowy podpis RSDP!\n");
         return;
     }
 
     if (!rsdp_validate_v1(rsdp)) {
-        kprintf("[BLAD] ACPI: nieprawidlowy checksum RSDP!\n");
+        kprintf("[BLAD] ACPI: nieprawidłowy checksum RSDP!\n");
         return;
     }
 
@@ -169,7 +169,7 @@ void acpi_init(u64 rsdp_phys, u64 hhdm) {
         // XSDT with 64-bit entries
         XSDT *xsdt = (XSDT *)phys_to_virt(rsdp->xsdt_addr);
         if (!acpi_validate_checksum(&xsdt->header)) {
-            kprintf("[BLAD] ACPI: nieprawidlowy checksum XSDT!\n");
+            kprintf("[BLAD] ACPI: nieprawidłowy checksum XSDT!\n");
             return;
         }
         u32 n = (xsdt->header.length - sizeof(ACPITableHeader)) / 8;
@@ -183,7 +183,7 @@ void acpi_init(u64 rsdp_phys, u64 hhdm) {
         // RSDT with 32-bit entries
         RSDT *rsdt = (RSDT *)phys_to_virt(rsdp->rsdt_addr);
         if (!acpi_validate_checksum(&rsdt->header)) {
-            kprintf("[BLAD] ACPI: nieprawidlowy checksum RSDT!\n");
+            kprintf("[BLAD] ACPI: nieprawidłowy checksum RSDT!\n");
             return;
         }
         u32 n = (rsdt->header.length - sizeof(ACPITableHeader)) / 4;
@@ -208,7 +208,7 @@ void acpi_init(u64 rsdp_phys, u64 hhdm) {
     ACPITableHeader *mcfg_hdr = acpi_find_table("MCFG");
     if (mcfg_hdr) parse_mcfg((MCFGTable *)mcfg_hdr);
 
-    kprintf("[DOBRZE] ACPI: zainicjalizowano, %d tabel zaladowanych\n",
+    kprintf("[DOBRZE] ACPI: zainicjalizowano, %d tabel załadowanych\n",
             acpi_table_count);
 }
 

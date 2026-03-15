@@ -78,7 +78,7 @@ void hpet_init(u64 hpet_phys, u64 hhdm) {
     u32 period_fs = (u32)(gcap >> HPET_GCAP_PERIOD_SHIFT); // femtoseconds per tick
 
     if (period_fs == 0) {
-        kprintf("[BLAD] HPET: nieprawidlowy okres (zero)!\n");
+        kprintf("[BLAD] HPET: nieprawidłowy okres (zero)!\n");
         return;
     }
 
@@ -86,7 +86,7 @@ void hpet_init(u64 hpet_phys, u64 hhdm) {
     hpet_freq   = 1000000000000000ULL / (u64)period_fs;
     hpet_period = hpet_freq / 1000;  // ticks per millisecond (for 1 kHz)
 
-    kprintf("[DOBRZE] HPET: okres=%u fs, czestotl.=%lu Hz, ticki/ms=%lu\n",
+    kprintf("[DOBRZE] HPET: okres=%u fs, częstotl.=%lu Hz, ticki/ms=%lu\n",
             period_fs, hpet_freq, hpet_period);
 
     // Disable HPET while configuring
@@ -98,7 +98,7 @@ void hpet_init(u64 hpet_phys, u64 hhdm) {
     // Verify timer 0 supports periodic mode
     u64 t0cap = hpet_read(HPET_TN_CFG(0));
     if (!(t0cap & HPET_TN_PER_INT_CAP)) {
-        kprintf("[BLAD] HPET: timer 0 nie obsluguje trybu periodycznego!\n");
+        kprintf("[BLAD] HPET: timer 0 nie obsługuje trybu periodycznego!\n");
         // Fall back to non-periodic (one-shot) — still usable for basic tick
     }
 
@@ -108,7 +108,7 @@ void hpet_init(u64 hpet_phys, u64 hhdm) {
     u8  chosen_pin = 2;
     if (!(route_cap & (1u << 2))) {
         chosen_pin = 0;
-        kprintf("[INFO] HPET: pin 2 niedostepny, uzywam pinu 0\n");
+        kprintf("[INFO] HPET: pin 2 niedostępny, używam pinu 0\n");
     }
 
     // Configure timer 0: periodic, level-triggered, interrupt enabled

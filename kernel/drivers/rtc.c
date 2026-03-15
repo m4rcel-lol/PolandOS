@@ -68,10 +68,10 @@ void rtc_init(void) {
     // Verify CMOS is accessible: read status register A, should be non-0xFF
     u8 sta = cmos_read(RTC_REG_STATUS_A);
     if (sta == 0xFF) {
-        kprintf("[BLAD] RTC: CMOS niedostepny!\n");
+        kprintf("[BLAD] RTC: CMOS niedostępny!\n");
         return;
     }
-    kprintf("[DOBRZE] RTC: CMOS dostepny, status_A=0x%x\n", sta);
+    kprintf("[DOBRZE] RTC: CMOS dostępny, status_A=0x%x\n", sta);
 }
 
 RTCTime rtc_read(void) {
