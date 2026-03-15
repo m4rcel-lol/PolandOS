@@ -46,6 +46,8 @@ KERNEL_SRCS := \
     kernel/net/dhcp.c \
     kernel/net/dns.c \
     kernel/shell/shell.c \
+    kernel/services/service.c \
+    kernel/installer/installer.c \
     kernel/lib/string.c \
     kernel/lib/printf.c \
     kernel/lib/panic.c

@@ -25,6 +25,7 @@
 #include "net/ethernet.h"
 #include "net/dhcp.h"
 #include "shell/shell.h"
+#include "services/service.h"
 #include "lib/string.h"
 #include "lib/printf.h"
 #include "lib/panic.h"
@@ -68,6 +69,10 @@ static volatile struct limine_kernel_address_request kaddr_request = {
 #define KERNEL_HEAP_START  0xFFFF900000000000ULL
 #define KERNEL_HEAP_SIZE   (64ULL * 1024ULL * 1024ULL)  // 64 MB
 
+// ─── Boot-time state (shared between service wrappers) ───────────────────────
+static u64 boot_hhdm;
+static struct limine_memmap_response *boot_memmap;
+
 // ─── Exception handlers ───────────────────────────────────────────────────────
 
 static void page_fault_handler(InterruptFrame *frame) {
@@ -83,6 +88,104 @@ static void gpf_handler(InterruptFrame *frame) {
            "  Selektor/kod: 0x%llx\n"
            "  RIP: 0x%llx  RSP: 0x%llx\n",
            frame->err_code, frame->rip, frame->rsp);
+}
+
+// ─── Service wrapper functions ───────────────────────────────────────────────
+// Each wraps an existing init call to match the svc_init_fn signature (int→0/err)
+
+static int svc_pmm(void) {
+    pmm_init((void *)boot_memmap->entries, boot_memmap->entry_count, boot_hhdm);
+    return 0;
+}
+
+static int svc_vmm(void) {
+    u64 kernel_phys = kaddr_request.response->physical_base;
+    u64 kernel_virt = kaddr_request.response->virtual_base;
+    u64 kernel_size = 2ULL * 1024ULL * 1024ULL;
+    for (u64 i = 0; i < boot_memmap->entry_count; i++) {
+        struct limine_memmap_entry *e = boot_memmap->entries[i];
+        if (e->type == LIMINE_MEMMAP_KERNEL_AND_MODULES) {
+            kernel_size = e->length;
+            break;
+        }
+    }
+    vmm_init(boot_hhdm, kernel_phys, kernel_virt, kernel_size);
+    gdt_setup_ist_stacks();
+    return 0;
+}
+
+static int svc_heap(void) {
+    vmm_map_region(KERNEL_HEAP_START, KERNEL_HEAP_SIZE,
+                   PAGE_PRESENT | PAGE_WRITE | PAGE_GLOBAL);
+    heap_init(KERNEL_HEAP_START, KERNEL_HEAP_SIZE);
+    return 0;
+}
+
+static int svc_acpi(void) {
+    u64 rsdp_phys = (u64)(uintptr_t)rsdp_request.response->address;
+    acpi_init(rsdp_phys, boot_hhdm);
+    return 0;
+}
+
+static int svc_apic(void) {
+    apic_init();
+    return 0;
+}
+
+static int svc_hpet(void) {
+    if (!acpi_hpet_phys) return -1;
+    hpet_init(acpi_hpet_phys, boot_hhdm);
+    return 0;
+}
+
+static int svc_interrupts(void) {
+    sti();
+    return 0;
+}
+
+static int svc_anthem(void) {
+    play_mazurek_dabrowskiego();
+    return 0;
+}
+
+static int svc_pci(void) {
+    if (acpi_mcfg_phys)
+        pci_init(acpi_mcfg_phys, boot_hhdm);
+    else
+        pci_init(0, boot_hhdm);
+    return 0;
+}
+
+static int svc_gpu(void) {
+    gpu_init();
+    return 0;
+}
+
+static int svc_e1000(void) {
+    return e1000_init();
+}
+
+static int svc_nvme(void) {
+    return nvme_init();
+}
+
+static int svc_rtc(void) {
+    rtc_init();
+    return 0;
+}
+
+static int svc_network(void) {
+    net_init();
+    return 0;
+}
+
+static int svc_dhcp(void) {
+    return dhcp_discover();
+}
+
+static int svc_keyboard(void) {
+    kb_init();
+    return 0;
 }
 
 // ─── kmain ───────────────────────────────────────────────────────────────────
@@ -125,142 +228,44 @@ void kmain(void)
     fb_draw_boot_screen();
     kprintf("[INFO]   Ekran startowy wyswietlony\n");
 
-    // NOTE: Mazurek Dabrowskiego moved after HPET + sti() — timer_sleep_ms()
-    //       requires working interrupts and an active HPET tick.
-
-    // ── 5. GDT ───────────────────────────────────────────────────────────────
+    // ── 5. GDT (required before anything else) ───────────────────────────────
     gdt_init();
     kprintf("[DOBRZE] GDT zainicjalizowany\n");
 
-    // ── 7. IDT ───────────────────────────────────────────────────────────────
+    // ── 6. IDT (required for exception handling) ─────────────────────────────
     idt_init();
     idt_register_handler(13, gpf_handler);
     idt_register_handler(14, page_fault_handler);
     kprintf("[DOBRZE] IDT zainicjalizowany\n");
-    // ── 8. PMM ────────────────────────────────────────────────────────────────
-    u64 hhdm = hhdm_request.response->offset;
-    struct limine_memmap_response *mm = memmap_request.response;
 
-    pmm_init((void *)mm->entries, mm->entry_count, hhdm);
-    kprintf("[DOBRZE] PMM: total=%llu MB, free=%llu MB\n",
-            pmm_total_bytes() / (1024ULL * 1024ULL),
-            pmm_free_bytes()  / (1024ULL * 1024ULL));
+    // ── Save boot-time state for service wrappers ────────────────────────────
+    boot_hhdm   = hhdm_request.response->offset;
+    boot_memmap = memmap_request.response;
 
-    // ── 9. VMM ────────────────────────────────────────────────────────────────
-    u64 kernel_phys = kaddr_request.response->physical_base;
-    u64 kernel_virt = kaddr_request.response->virtual_base;
+    // ── Register system services (OpenRC-style) ──────────────────────────────
+    svc_register("pamiec-fizyczna",    "Menedzer pamieci fizycznej (PMM)",     svc_pmm,        true);
+    svc_register("pamiec-wirtualna",   "Menedzer pamieci wirtualnej (VMM)",   svc_vmm,        true);
+    svc_register("sterta",             "Alokator sterty jadra (64 MB)",       svc_heap,       true);
+    svc_register("acpi",               "Tabele ACPI (FADT, MADT, HPET)",     svc_acpi,       true);
+    svc_register("apic",               "Kontroler przerwan APIC",            svc_apic,       true);
+    svc_register("zegar",              "Zegar HPET (1000 Hz)",               svc_hpet,       false);
+    svc_register("przerwania",         "Przerwania procesora (sti)",          svc_interrupts, true);
+    svc_register("hymn",               "Mazurek Dabrowskiego",                svc_anthem,     false);
+    svc_register("szyna-pci",          "Magistrala PCI/PCIe",                svc_pci,        false);
+    svc_register("gpu",                "Detekcja kart graficznych",           svc_gpu,        false);
+    svc_register("siec-e1000",         "Karta sieciowa Intel e1000",          svc_e1000,      false);
+    svc_register("dysk-nvme",          "Dysk NVMe SSD",                       svc_nvme,       false);
+    svc_register("zegar-rtc",          "Zegar czasu rzeczywistego (RTC)",     svc_rtc,        false);
+    svc_register("stos-sieciowy",      "Warstwa sieciowa (Ethernet/IP)",      svc_network,    false);
+    svc_register("dhcp",               "Klient DHCP (autokonfiguracja IP)",   svc_dhcp,       false);
+    svc_register("klawiatura",         "Klawiatura PS/2",                     svc_keyboard,   false);
 
-    // Determine kernel size by scanning memmap for kernel region
-    u64 kernel_size = 2ULL * 1024ULL * 1024ULL;  // conservative 2 MB default
-    for (u64 i = 0; i < mm->entry_count; i++) {
-        struct limine_memmap_entry *e = mm->entries[i];
-        if (e->type == LIMINE_MEMMAP_KERNEL_AND_MODULES) {
-            kernel_size = e->length;
-            break;
-        }
-    }
+    // ── Start all services with OpenRC-style animation ───────────────────────
+    svc_start_all();
 
-    vmm_init(hhdm, kernel_phys, kernel_virt, kernel_size);
-    kprintf("[DOBRZE] VMM zainicjalizowany (HHDM=0x%llx)\n", hhdm);
-
-    // ── 9a. IST stacks (double-fault needs a known-good stack) ───────────────
-    gdt_setup_ist_stacks();
-    kprintf("[DOBRZE] GDT: IST stack skonfigurowany\n");
-
-    // ── 10. Heap ──────────────────────────────────────────────────────────────
-    // Map the heap virtual address range before initialising the heap allocator
-    vmm_map_region(KERNEL_HEAP_START, KERNEL_HEAP_SIZE,
-                   PAGE_PRESENT | PAGE_WRITE | PAGE_GLOBAL);
-    heap_init(KERNEL_HEAP_START, KERNEL_HEAP_SIZE);
-    kprintf("[DOBRZE] Sterta jadra: 0x%llx, %llu MB\n",
-            KERNEL_HEAP_START, KERNEL_HEAP_SIZE / (1024ULL * 1024ULL));
-
-    // ── 11. ACPI ─────────────────────────────────────────────────────────────
-    u64 rsdp_phys = (u64)(uintptr_t)rsdp_request.response->address;
-    acpi_init(rsdp_phys, hhdm);
-    kprintf("[DOBRZE] ACPI zainicjalizowany\n");
-
-    // ── 12. APIC ─────────────────────────────────────────────────────────────
-    apic_init();
-    kprintf("[DOBRZE] APIC zainicjalizowany\n");
-
-    // ── 13. HPET ─────────────────────────────────────────────────────────────
-    if (acpi_hpet_phys) {
-        hpet_init(acpi_hpet_phys, hhdm);
-        kprintf("[DOBRZE] HPET zainicjalizowany (phys=0x%llx)\n", acpi_hpet_phys);
-    } else {
-        kprintf("[UWAGA]  Brak HPET — zegar moze nie dzialac\n");
-    }
-
-    // ── 14. Enable interrupts ─────────────────────────────────────────────────
-    sti();
-    kprintf("[DOBRZE] Przerwania wlaczone\n");
-
-    // ── 14a. Mazurek Dabrowskiego (needs working timer + interrupts) ──────────
-    play_mazurek_dabrowskiego();
-    kprintf("[INFO]   Mazurek Dabrowskiego zagrany\n");
-
-    // ── 15. PCI ───────────────────────────────────────────────────────────────
-    if (acpi_mcfg_phys) {
-        pci_init(acpi_mcfg_phys, hhdm);
-    } else {
-        kprintf("[INFO]   Brak MCFG — PCI przez porty I/O (CF8/CFC)\n");
-        pci_init(0, hhdm);  // 0 = use legacy I/O ports
-    }
-    kprintf("[DOBRZE] PCI: znaleziono %d urzadzen\n", pci_device_count);
-
-    // ── 15a. GPU detection ────────────────────────────────────────────────────
-    gpu_init();
-
-    // ── 16. e1000 ─────────────────────────────────────────────────────────────
-    int e1000_ok = e1000_init();
-    if (e1000_ok == 0) {
-        kprintf("[DOBRZE] e1000: karta sieciowa zainicjalizowana\n");
-    } else {
-        kprintf("[UWAGA]  e1000: karta sieciowa niedostepna (kod=%d)\n", e1000_ok);
-    }
-
-    // ── 17. NVMe ─────────────────────────────────────────────────────────────
-    int nvme_ok = nvme_init();
-    if (nvme_ok == 0) {
-        u64 blocks   = nvme_get_block_count(1);
-        u32 blk_size = nvme_get_block_size(1);
-        u64 mb       = (blocks * blk_size) / (1024ULL * 1024ULL);
-        kprintf("[DOBRZE] NVMe: %llu MB pojemnosci\n", mb);
-    } else {
-        kprintf("[UWAGA]  NVMe: dysk niedostepny (kod=%d)\n", nvme_ok);
-    }
-
-    // ── 18. RTC ───────────────────────────────────────────────────────────────
-    rtc_init();
-    RTCTime t = rtc_read();
-    kprintf("[DOBRZE] RTC: %02u.%02u.%04u %02u:%02u:%02u\n",
-            t.day, t.month, t.year, t.hours, t.minutes, t.seconds);
-
-    // ── 19. Network init ─────────────────────────────────────────────────────
-    net_init();
-    kprintf("[DOBRZE] Warstwa sieciowa zainicjalizowana\n");
-
-    // ── 20. DHCP ─────────────────────────────────────────────────────────────
-    if (e1000_ok == 0) {
-        kprintf("[INFO]   DHCP: wyslano zapytanie...\n");
-        int dhcp_ok = dhcp_discover();
-        if (dhcp_ok == 0) {
-            char ip_str[16];
-            ip_to_str(net_ip, ip_str);
-            kprintf("[DOBRZE] DHCP: adres IP = %s\n", ip_str);
-        } else {
-            kprintf("[UWAGA]  DHCP: nie uzyskano adresu IP\n");
-        }
-    }
-
-    // ── 21. Keyboard ─────────────────────────────────────────────────────────
-    kb_init();
-    kprintf("[DOBRZE] Klawiatura PS/2 zainicjalizowana\n");
-
-    // ── 22. Shell ─────────────────────────────────────────────────────────────
+    // ── Shell (never returns) ────────────────────────────────────────────────
     kprintf("[DOBRZE] Uruchamianie powloki systemowej...\n");
-    shell_run();  // never returns
+    shell_run();
 
     // Should never reach here
     cli();
