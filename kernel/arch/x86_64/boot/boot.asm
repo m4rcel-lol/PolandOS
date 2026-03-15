@@ -29,3 +29,5 @@ align 16
 kernel_stack:
     resb 65536  ; 64K stack
 kernel_stack_top:
+
+section .note.GNU-stack noalloc noexec nowrite progbits

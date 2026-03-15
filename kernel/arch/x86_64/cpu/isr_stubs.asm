@@ -390,3 +390,5 @@ isr_stub_table:
     dq isr232, isr233, isr234, isr235, isr236, isr237, isr238, isr239
     dq isr240, isr241, isr242, isr243, isr244, isr245, isr246, isr247
     dq isr248, isr249, isr250, isr251, isr252, isr253, isr254, isr255
+
+section .note.GNU-stack noalloc noexec nowrite progbits

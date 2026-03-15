@@ -29,7 +29,7 @@
 
 // ─── Limine Requests ─────────────────────────────────────────────────────────
 
-__attribute__((used, section(".limine_requests")))
+// NOTE: LIMINE_BASE_REVISION macro already includes section(".limine_reqs")
 static volatile LIMINE_BASE_REVISION(6);
 
 __attribute__((used, section(".limine_requests")))

@@ -13,6 +13,12 @@ typedef int16_t  i16;
 typedef int32_t  i32;
 typedef int64_t  i64;
 typedef uintptr_t uptr;
+#ifndef NULL
 #define NULL ((void*)0)
+#endif
+#ifndef true
 #define true 1
+#endif
+#ifndef false
 #define false 0
+#endif

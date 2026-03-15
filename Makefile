@@ -1,13 +1,13 @@
 # PolandOS — System budowania
 # Jadro Orzel
 
-CROSS ?= x86_64-elf-
+CROSS ?= x86_64-linux-gnu-
 CC    := $(CROSS)gcc
 AS    := nasm
 LD    := $(CROSS)ld
 
 CFLAGS := -std=c17 -ffreestanding -nostdlib -mno-red-zone -mno-sse -mno-sse2 \
-          -mcmodel=kernel -O2 -Wall -Wextra -Wno-unused-parameter \
+          -mcmodel=kernel -fno-pic -fno-pie -O2 -Wall -Wextra -Wno-unused-parameter \
           -Iinclude -Ikernel
 
 ASFLAGS := -f elf64

@@ -1,0 +1,22 @@
+# Build artifacts
+*.o
+*.elf
+*.iso
+nvme.img
+
+# Limine binaries (downloaded during build)
+limine/limine
+limine/*.bin
+limine/*.sys
+limine/*.EFI
+limine/BOOTX64.EFI
+
+# ISO staging dir (populated during build)
+iso_root/boot/limine/
+iso_root/EFI/
+iso_root/boot/polandos.elf
+
+# Editor/IDE
+.vscode/
+*.swp
+*~
