@@ -152,7 +152,7 @@ static void set_part_name(GPTEntry *entry, const char *src, int max)
 // We write a simple superblock at the start of the partition to identify
 // a PolandOS installation.
 
-#define POLANDOS_MAGIC      0x504F4C414E444F53ULL  // "POLANDOS"
+#define POLANDOS_MAGIC      0x504F4C414E444F53ULL  // "POLANDOS" (big-endian ASCII)
 #define POLANDOS_VERSION    1
 
 typedef struct __attribute__((packed)) {
@@ -234,6 +234,10 @@ void installer_run(void)
     if (part_end <= part_start) {
         part_end = total_blocks - 34;
     }
+    if (part_end <= part_start) {
+        print_err("Dysk jest zbyt maly na instalacje PolandOS!");
+        return;
+    }
 
     // Write partition entries at LBA 2 (128 entries x 128 bytes = 32 sectors)
     // Only first entry is populated
@@ -260,16 +264,16 @@ void installer_run(void)
         }
     }
 
-    // Calculate partition entry CRC
-    // We need to read back all 32 sectors and CRC them
+    // Calculate partition entry CRC sector by sector
     u32 part_crc = 0xFFFFFFFF;
     for (u32 s = 0; s < 32; s++) {
-        if (nvme_read_blocks(1, 2 + s, 1, part_buf) != 0) {
+        u8 crc_buf[512];
+        if (nvme_read_blocks(1, 2 + s, 1, crc_buf) != 0) {
             print_err("Blad odczytu wpisow partycji!");
             return;
         }
         for (int b = 0; b < 512; b++) {
-            part_crc ^= part_buf[b];
+            part_crc ^= crc_buf[b];
             for (int j = 0; j < 8; j++) {
                 if (part_crc & 1)
                     part_crc = (part_crc >> 1) ^ 0xEDB88320;
@@ -369,7 +373,10 @@ void installer_run(void)
     if (nvme_read_blocks(1, part_start, 1, buf) == 0) {
         sb = (PolandOSSuperblock *)buf;
         sb->kernel_sectors = kernel_sectors;
-        nvme_write_blocks(1, part_start, 1, buf);
+        if (nvme_write_blocks(1, part_start, 1, buf) != 0) {
+            print_err("Blad aktualizacji superbloku!");
+            return;
+        }
     }
 
     print_ok("Jadro skopiowane na dysk");

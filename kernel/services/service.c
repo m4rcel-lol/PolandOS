@@ -51,9 +51,9 @@ static void print_status_line(const char *name, ServiceStatus status)
     fb_puts(name);
     fb_puts(" ...");
 
-    // Pad to align status tag (target column ~60)
-    int len = 16 + (int)strlen(name);  // " * Uruchamianie " + name + " ..."
-    int pad = 55 - len;
+    // " * Uruchamianie " = 17 chars, then name, then " ..."
+    int len = 17 + (int)strlen(name) + 4;  // prefix + name + " ..."
+    int pad = 60 - len;
     if (pad < 1) pad = 1;
     for (int i = 0; i < pad; i++) fb_putchar(' ');
 
@@ -172,15 +172,15 @@ void svc_print_status(void)
             break;
         case SVC_FAILED:
             fb_set_color(COLOR_RED, COLOR_BLACK);
-            fb_puts("[BLAD]    ");
+            fb_puts("[BLAD   ] ");
             break;
         case SVC_STOPPED:
             fb_set_color(COLOR_GRAY, COLOR_BLACK);
-            fb_puts("[STOP]    ");
+            fb_puts("[STOP   ] ");
             break;
         default:
             fb_set_color(COLOR_YELLOW, COLOR_BLACK);
-            fb_puts("[......] ");
+            fb_puts("[START  ] ");
             break;
         }
 
