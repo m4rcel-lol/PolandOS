@@ -108,7 +108,6 @@ int atoi(const char *s) {
 }
 
 static const char digits_lower[] = "0123456789abcdef";
-static const char digits_upper[] = "0123456789ABCDEF";
 
 void utoa(u64 val, char *buf, int base) {
     char tmp[65];

@@ -82,12 +82,6 @@ static void print_colored(const char *s, u32 color)
     fb_set_color(COLOR_WHITE, COLOR_BLACK);
 }
 
-static void print_line(const char *s, u32 color)
-{
-    print_colored(s, color);
-    fb_putchar('\n');
-}
-
 // Erase N characters on the current terminal line
 static void erase_chars(int n)
 {
