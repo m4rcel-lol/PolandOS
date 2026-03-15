@@ -4,12 +4,8 @@
 *.iso
 nvme.img
 
-# Limine binaries (downloaded during build)
-limine/limine
-limine/*.bin
-limine/*.sys
-limine/*.EFI
-limine/BOOTX64.EFI
+# Limine (downloaded during build)
+limine/
 
 # ISO staging dir (populated during build)
 iso_root/boot/limine/
