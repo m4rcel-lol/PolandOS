@@ -8,8 +8,8 @@ LD    := $(CROSS)ld
 OVMF  ?= /usr/share/ovmf/OVMF.fd
 
 CFLAGS := -std=c17 -ffreestanding -nostdlib -mno-red-zone -mno-sse -mno-sse2 \
-          -mcmodel=kernel -fno-pic -fno-pie -O2 -Wall -Wextra -Wno-unused-parameter \
-          -Iinclude -Ikernel
+          -mcmodel=kernel -fno-pic -fno-pie -fno-stack-protector -O2 -Wall -Wextra \
+          -Wno-unused-parameter -Iinclude -Ikernel
 
 ASFLAGS := -f elf64
 
