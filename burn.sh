@@ -75,7 +75,7 @@ info "ISO found: $ISO ($(du -h "$ISO" | cut -f1))"
 # ─── List removable USB devices ─────────────────────────────────────────────
 
 list_usb_devices() {
-    lsblk -dnpo NAME,SIZE,MODEL,TRAN | awk '$4 == "usb" { print $1, $2, $3 }'
+    lsblk -dnpo NAME,SIZE,MODEL,TRAN | awk '$NF == "usb" { $NF=""; sub(/[[:space:]]+$/, ""); print }'
 }
 
 select_device() {
@@ -129,7 +129,7 @@ if [[ -n "$DEVICE" ]]; then
     fi
 
     # Ensure it is a USB device
-    device_tran=$(lsblk -dnpo TRAN "$DEVICE" 2>/dev/null || true)
+    device_tran=$(lsblk -dnpo TRAN "$DEVICE" 2>/dev/null | awk '{print $1}' || true)
     if [[ "$device_tran" != "usb" ]]; then
         warn "$DEVICE does not appear to be a USB device (transport: ${device_tran:-unknown})."
         read -rp "Continue anyway? [y/N]: " yn
