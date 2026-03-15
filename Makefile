@@ -5,6 +5,7 @@ CROSS ?= x86_64-linux-gnu-
 CC    := $(CROSS)gcc
 AS    := nasm
 LD    := $(CROSS)ld
+OVMF  ?= /usr/share/ovmf/OVMF.fd
 
 CFLAGS := -std=c17 -ffreestanding -nostdlib -mno-red-zone -mno-sse -mno-sse2 \
           -mcmodel=kernel -fno-pic -fno-pie -O2 -Wall -Wextra -Wno-unused-parameter \
@@ -119,7 +120,7 @@ run: iso nvme.img
 	qemu-system-x86_64 \
 	    -M q35 \
 	    -m 512M \
-	    -bios /usr/share/ovmf/OVMF.fd \
+	    -bios $(OVMF) \
 	    -drive file=$(ISO),format=raw,if=ide \
 	    -drive file=nvme.img,if=none,id=nvme0 \
 	    -device nvme,drive=nvme0,serial=deadbeef \
@@ -132,7 +133,7 @@ debug: iso nvme.img
 	qemu-system-x86_64 \
 	    -M q35 \
 	    -m 512M \
-	    -bios /usr/share/ovmf/OVMF.fd \
+	    -bios $(OVMF) \
 	    -drive file=$(ISO),format=raw,if=ide \
 	    -drive file=nvme.img,if=none,id=nvme0 \
 	    -device nvme,drive=nvme0,serial=deadbeef \
