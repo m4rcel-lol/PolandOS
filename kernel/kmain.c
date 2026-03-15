@@ -21,9 +21,12 @@
 #include "drivers/e1000.h"
 #include "drivers/speaker.h"
 #include "drivers/gpu.h"
+#include "drivers/mouse.h"
 #include "acpi/acpi.h"
+#include "fs/vfs.h"
 #include "net/ethernet.h"
 #include "net/dhcp.h"
+#include "gui/desktop.h"
 #include "shell/shell.h"
 #include "services/service.h"
 #include "lib/string.h"
@@ -188,6 +191,16 @@ static int svc_keyboard(void) {
     return 0;
 }
 
+static int svc_mouse(void) {
+    mouse_init();
+    return 0;
+}
+
+static int svc_vfs(void) {
+    vfs_init();
+    return 0;
+}
+
 // ─── kmain ───────────────────────────────────────────────────────────────────
 
 void kmain(void)
@@ -259,13 +272,15 @@ void kmain(void)
     svc_register("stos-sieciowy",      "Warstwa sieciowa (Ethernet/IP)",      svc_network,    false);
     svc_register("dhcp",               "Klient DHCP (autokonfiguracja IP)",   svc_dhcp,       false);
     svc_register("klawiatura",         "Klawiatura PS/2",                     svc_keyboard,   false);
+    svc_register("mysz",               "Mysz PS/2",                           svc_mouse,      false);
+    svc_register("vfs",                "Wirtualny system plikow (VFS)",       svc_vfs,        false);
 
     // ── Start all services with OpenRC-style animation ───────────────────────
     svc_start_all();
 
-    // ── Shell (never returns) ────────────────────────────────────────────────
-    kprintf("[DOBRZE] Uruchamianie powloki systemowej...\n");
-    shell_run();
+    // ── Launch desktop environment (Windows 3.0 style) ───────────────────────
+    kprintf("[DOBRZE] Uruchamianie pulpitu Windows 3.0...\n");
+    desktop_run();
 
     // Should never reach here
     cli();
