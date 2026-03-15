@@ -87,25 +87,26 @@ static u16 dns_parse_name(const u8 *pkt, u16 pkt_len,
     return result;
 }
 
+// Incrementing transaction ID to prevent DNS cache poisoning
+static u16 dns_txid = 0x4F53;  // 'OS'
+
 // ---------------------------------------------------------------------------
 // DNS resolve: send A query, parse response
 // ---------------------------------------------------------------------------
 int dns_resolve(const char *hostname, u32 *ip_out) {
     if (!net_configured) return -1;
 
-    int fd = udp_open(0);  // ephemeral local port — pick unused
-    // Use a local port in ephemeral range
-    // Re-open with a specific port to avoid port 0
-    udp_close(fd);
-    fd = udp_open(53001);  // local ephemeral port for DNS
+    // Use a fixed ephemeral source port for DNS responses
+    int fd = udp_open(53001);
     if (fd < 0) return -1;
 
     // Build DNS query
     u8 query[512];
     u16 pos = 0;
 
+    u16 txid = dns_txid++;
     DNSHeader *dhdr = (DNSHeader *)query;
-    dhdr->id      = htons(0x1234);
+    dhdr->id      = htons(txid);
     dhdr->flags   = htons(0x0100);  // recursion desired
     dhdr->qdcount = htons(1);
     dhdr->ancount = 0;
@@ -141,6 +142,8 @@ int dns_resolve(const char *hostname, u32 *ip_out) {
     if (resp_len < (u16)sizeof(DNSHeader)) return -1;
 
     DNSHeader *rhdr = (DNSHeader *)resp;
+    // Validate transaction ID matches our query
+    if (ntohs(rhdr->id) != txid) return -1;
     u16 ancount = ntohs(rhdr->ancount);
     if (ancount == 0) return -1;
 

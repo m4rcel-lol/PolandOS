@@ -35,9 +35,9 @@ void udp_close(int fd) {
 int udp_send(int fd, u32 dst_ip, u16 dst_port, const u8 *data, u16 len) {
     if (fd < 0 || fd >= UDP_MAX_SOCKETS) return -1;
     if (!udp_sockets[fd].active) return -1;
-    if (len > 1472) return -1;  // 1500 - 20 IP - 8 UDP
+    if (len > UDP_MAX_PAYLOAD) return -1;  // 1500 - 20 IP - 8 UDP
 
-    u8 buf[8 + 1472];
+    u8 buf[8 + UDP_MAX_PAYLOAD];
     UDPHeader *udp = (UDPHeader *)buf;
 
     udp->src_port = htons(udp_sockets[fd].local_port);

@@ -60,8 +60,8 @@ static u16 tcp_checksum(u32 src_ip, u32 dst_ip, const u8 *segment, u16 seg_len) 
 // ---------------------------------------------------------------------------
 static int tcp_send_segment(TCPSocket *s, u8 flags,
                             const u8 *data, u16 data_len) {
-    u8 seg[20 + 4096];
-    if (data_len > 4096) data_len = 4096;
+    u8 seg[20 + TCP_SEGMENT_MAX];
+    if (data_len > TCP_SEGMENT_MAX) data_len = TCP_SEGMENT_MAX;
 
     TCPHeader *hdr = (TCPHeader *)seg;
     hdr->src_port   = htons(s->local_port);
@@ -104,7 +104,7 @@ int tcp_connect(u32 dst_ip, u16 dst_port) {
     s->local_port  = tcp_next_port++;
     s->remote_ip   = dst_ip;
     s->remote_port = dst_port;
-    s->seq         = 0x12345678u;  // initial sequence number
+    s->seq         = (u32)(timer_get_ms() * 6364136223846793005ULL + 1442695040888963407ULL);  // timer-based ISN
     s->ack         = 0;
     s->window      = 4096;
 
@@ -160,7 +160,7 @@ int tcp_send(int fd, const u8 *data, u32 len) {
     if (fd < 0 || fd >= TCP_MAX_SOCKETS) return -1;
     TCPSocket *s = &tcp_sockets[fd];
     if (!s->active || s->state != TCP_ESTABLISHED) return -1;
-    if (len > 4096) len = 4096;
+    if (len > TCP_SEGMENT_MAX) len = TCP_SEGMENT_MAX;
 
     tcp_send_segment(s, TCP_PSH | TCP_ACK, data, (u16)len);
     s->seq += len;

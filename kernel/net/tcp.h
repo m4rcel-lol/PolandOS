@@ -2,7 +2,8 @@
 #pragma once
 #include "../../include/types.h"
 
-#define TCP_MAX_SOCKETS 4
+#define TCP_MAX_SOCKETS  4
+#define TCP_SEGMENT_MAX  4096  // max segment data, matches TCPSocket buffer size
 
 // TCP flags
 #define TCP_FIN  0x01

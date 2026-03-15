@@ -9,7 +9,8 @@ typedef struct __attribute__((packed)) {
     u16 checksum;
 } UDPHeader;
 
-#define UDP_MAX_SOCKETS 8
+#define UDP_MAX_SOCKETS  8
+#define UDP_MAX_PAYLOAD  1472  // 1500 MTU - 20 IP header - 8 UDP header
 
 typedef struct {
     u16 local_port;
