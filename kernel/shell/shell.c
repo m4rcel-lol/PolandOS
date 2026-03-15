@@ -18,6 +18,8 @@
 #include "../net/ethernet.h"
 #include "../net/icmp.h"
 #include "../net/dns.h"
+#include "../services/service.h"
+#include "../installer/installer.h"
 #include "../../include/types.h"
 
 // ─── Kolory ───────────────────────────────────────────────────────────────────
@@ -256,6 +258,8 @@ static void cmd_pomoc(void)
     fb_puts("  panika          - wymus panic jadra\n");
     fb_puts("  echo <tekst>    - wyswietl tekst\n");
     fb_puts("  hex <addr> <n>  - wyswietl zawartosc pamieci\n");
+    fb_puts("  uslugi          - lista uslug systemowych\n");
+    fb_puts("  instaluj        - zainstaluj system na dysku\n");
 }
 
 static void cmd_info(void)
@@ -541,6 +545,10 @@ void shell_run(void)
             cmd_echo(args, argc);
         } else if (strcmp(cmd, "hex") == 0) {
             cmd_hex(args, argc);
+        } else if (strcmp(cmd, "uslugi") == 0) {
+            svc_print_status();
+        } else if (strcmp(cmd, "instaluj") == 0) {
+            installer_run();
         } else {
             fb_set_color(COLOR_RED, COLOR_BLACK);
             kprintf("Nieznane polecenie: %s.", cmd);
