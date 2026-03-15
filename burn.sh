@@ -129,9 +129,9 @@ if [[ -n "$DEVICE" ]]; then
     fi
 
     # Ensure it is a USB device
-    local_tran=$(lsblk -dnpo TRAN "$DEVICE" 2>/dev/null || true)
-    if [[ "$local_tran" != "usb" ]]; then
-        warn "$DEVICE does not appear to be a USB device (transport: ${local_tran:-unknown})."
+    device_tran=$(lsblk -dnpo TRAN "$DEVICE" 2>/dev/null || true)
+    if [[ "$device_tran" != "usb" ]]; then
+        warn "$DEVICE does not appear to be a USB device (transport: ${device_tran:-unknown})."
         read -rp "Continue anyway? [y/N]: " yn
         if [[ ! "$yn" =~ ^[Yy]$ ]]; then
             info "Aborted."
