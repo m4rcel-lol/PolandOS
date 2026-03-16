@@ -217,7 +217,7 @@ fi
 # Basic verification: compare the first bytes of the ISO with the device
 info "Verifying burn..."
 ISO_HASH=$(dd if="$ISO" bs=1M count=1 status=none | md5sum | awk '{print $1}')
-DEV_HASH=$(dd if="$DEVICE" bs=1M count=1 status=none | md5sum | awk '{print $1}')
+DEV_HASH=$(dd if="$DEVICE" bs=1M count=1 status=none iflag=direct | md5sum | awk '{print $1}')
 
 if [[ "$ISO_HASH" != "$DEV_HASH" ]]; then
     error "Verification FAILED! The first 1 MiB of the device does not match the ISO."
