@@ -35,8 +35,12 @@
 
 // ─── Limine Requests ─────────────────────────────────────────────────────────
 
-// NOTE: LIMINE_BASE_REVISION macro already includes section(".limine_reqs")
-static volatile LIMINE_BASE_REVISION(6);
+// Start marker — Limine v7 scans between these markers for requests
+__attribute__((used, section(".limine_requests_start")))
+static volatile LIMINE_REQUESTS_START_MARKER;
+
+__attribute__((used, section(".limine_requests")))
+static volatile LIMINE_BASE_REVISION(2);
 
 __attribute__((used, section(".limine_requests")))
 static volatile struct limine_framebuffer_request fb_request = {
@@ -67,6 +71,10 @@ static volatile struct limine_kernel_address_request kaddr_request = {
     .id       = LIMINE_KERNEL_ADDRESS_REQUEST,
     .revision = 0,
 };
+
+// End marker — must come after all requests
+__attribute__((used, section(".limine_requests_end")))
+static volatile LIMINE_REQUESTS_END_MARKER;
 
 // ─── Kernel Heap Address ─────────────────────────────────────────────────────
 #define KERNEL_HEAP_START  0xFFFF900000000000ULL

@@ -127,7 +127,7 @@ PolandOS/
 │   ├── limine.h                       # Limine bootloader protocol
 │   └── io.h                           # inb / outb / inl / outl
 ├── linker.ld                          # Linker script (higher-half)
-├── limine.conf                        # Bootloader configuration
+├── limine.cfg                         # Bootloader configuration
 ├── Makefile                           # Build system
 ├── build.sh                           # Arch Linux build helper
 ├── burn.sh                            # Burn ISO to USB (Arch Linux)

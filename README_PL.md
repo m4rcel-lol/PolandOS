@@ -68,7 +68,7 @@ PolandOS/
 │   ├── limine.h                       # Protokół Limine v6
 │   └── io.h                           # inb/outb/inl/outl
 ├── linker.ld                          # Skrypt linkera (higher-half)
-├── limine.conf                        # Konfiguracja bootloadera
+├── limine.cfg                         # Konfiguracja bootloadera
 ├── Makefile                           # System budowania
 ├── build.sh                           # Skrypt budowania (Arch Linux)
 ├── burn.sh                            # Nagrywanie ISO na pendrive (Arch Linux)
