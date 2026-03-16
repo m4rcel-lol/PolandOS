@@ -193,6 +193,40 @@ Powłoka obsługuje:
 - Usuwanie całej linii (Ctrl+U)
 - Rotujące polskie żarty programistyczne przy starcie (MOTD)
 
+## CI / GitHub Actions
+
+PolandOS zawiera workflow GitHub Actions, który automatycznie buduje jądro (ELF) oraz bootowalny obraz ISO przy każdym pushu i pull requeście do gałęzi `main`.
+
+### Ręczne uruchamianie budowania
+
+1. Wejdź w zakładkę **Actions** w repozytorium na GitHubie.
+2. Wybierz workflow **Build PolandOS** z bocznego panelu.
+3. Kliknij **Run workflow** → wybierz gałąź → **Run workflow**.
+
+### Pobieranie artefaktów
+
+Po zakończeniu workflow:
+
+1. Otwórz ukończony workflow run w zakładce **Actions**.
+2. Przewiń do sekcji **Artifacts** na dole podsumowania.
+3. Pobierz **polandos.iso** (bootowalny ISO) lub **polandos.elf** (samo jądro).
+
+### Uruchamianie pobranego ISO
+
+Uruchom ISO w QEMU (wymagane `qemu-system-x86_64` i OVMF):
+
+```bash
+qemu-system-x86_64 \
+    -M q35 -m 512M \
+    -bios /usr/share/ovmf/OVMF.fd \
+    -cdrom polandos.iso \
+    -boot d \
+    -serial stdio \
+    -no-reboot
+```
+
+Lub nagraj na pendrive USB i uruchom na prawdziwym sprzęcie — patrz **Nagrywanie na pendrive** powyżej.
+
 ## Prawa autorskie
 
 PolandOS © 2024 — Oryginalne dzieło.
