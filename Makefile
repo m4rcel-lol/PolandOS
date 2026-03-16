@@ -133,7 +133,8 @@ run: iso nvme.img
 	    -m 512M \
 	    -bios $(OVMF) \
 	    -vga std \
-	    -drive file=$(ISO),format=raw,if=ide \
+	    -cdrom $(ISO) \
+	    -boot d \
 	    -drive file=nvme.img,if=none,id=nvme0 \
 	    -device nvme,drive=nvme0,serial=deadbeef \
 	    -netdev user,id=net0 \
@@ -147,7 +148,8 @@ debug: iso nvme.img
 	    -m 512M \
 	    -bios $(OVMF) \
 	    -vga std \
-	    -drive file=$(ISO),format=raw,if=ide \
+	    -cdrom $(ISO) \
+	    -boot d \
 	    -drive file=nvme.img,if=none,id=nvme0 \
 	    -device nvme,drive=nvme0,serial=deadbeef \
 	    -netdev user,id=net0 \
