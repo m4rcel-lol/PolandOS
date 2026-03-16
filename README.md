@@ -194,6 +194,40 @@ make CROSS=x86_64-linux-gnu- all    # explicit cross prefix
 make CROSS= all                     # native compiler on x86_64 host
 ```
 
+## CI / GitHub Actions
+
+PolandOS includes a GitHub Actions workflow that automatically builds the kernel ELF and a bootable ISO on every push and pull request to `main`.
+
+### Triggering a build manually
+
+1. Go to the **Actions** tab in the GitHub repository.
+2. Select the **Build PolandOS** workflow from the sidebar.
+3. Click **Run workflow** → choose the branch → **Run workflow**.
+
+### Downloading artifacts
+
+After the workflow finishes:
+
+1. Open the completed workflow run from the **Actions** tab.
+2. Scroll to the **Artifacts** section at the bottom of the run summary.
+3. Download **polandos.iso** (bootable ISO) or **polandos.elf** (kernel only).
+
+### Running the downloaded ISO
+
+Boot the ISO in QEMU (requires `qemu-system-x86_64` and OVMF):
+
+```bash
+qemu-system-x86_64 \
+    -M q35 -m 512M \
+    -bios /usr/share/ovmf/OVMF.fd \
+    -cdrom polandos.iso \
+    -boot d \
+    -serial stdio \
+    -no-reboot
+```
+
+Or write it to a USB drive and boot real hardware — see **Burn to USB** above.
+
 ## Known Limitations
 
 - No userspace — runs entirely in ring 0
