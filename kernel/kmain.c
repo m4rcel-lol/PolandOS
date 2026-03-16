@@ -104,8 +104,9 @@ static void gpf_handler(InterruptFrame *frame) {
 // ─── Service wrapper functions ───────────────────────────────────────────────
 // Each wraps an existing init call to match the svc_init_fn signature (int→0/err)
 
+// PMM is initialized early (before IDT), so this is a no-op placeholder
 static int svc_pmm(void) {
-    pmm_init((void *)boot_memmap->entries, boot_memmap->entry_count, boot_hhdm);
+    // Already initialized in kmain before IDT setup
     return 0;
 }
 
@@ -121,7 +122,6 @@ static int svc_vmm(void) {
         }
     }
     vmm_init(boot_hhdm, kernel_phys, kernel_virt, kernel_size);
-    gdt_setup_ist_stacks();
     return 0;
 }
 
@@ -253,15 +253,23 @@ void kmain(void)
     gdt_init();
     kprintf("[DOBRZE] GDT zainicjalizowany\n");
 
+    // ── Save boot-time state for early initialization ────────────────────────
+    boot_hhdm   = hhdm_request.response->offset;
+    boot_memmap = memmap_request.response;
+
+    // ── Initialize PMM early (required for IST stacks) ───────────────────────
+    pmm_init((void *)boot_memmap->entries, boot_memmap->entry_count, boot_hhdm);
+    kprintf("[DOBRZE] PMM zainicjalizowany wczesnie\n");
+
+    // ── Setup IST stacks (requires PMM and hhdm_offset) ──────────────────────
+    gdt_setup_ist_stacks();
+    kprintf("[DOBRZE] IST stacks zainicjalizowane\n");
+
     // ── 6. IDT (required for exception handling) ─────────────────────────────
     idt_init();
     idt_register_handler(13, gpf_handler);
     idt_register_handler(14, page_fault_handler);
     kprintf("[DOBRZE] IDT zainicjalizowany\n");
-
-    // ── Save boot-time state for service wrappers ────────────────────────────
-    boot_hhdm   = hhdm_request.response->offset;
-    boot_memmap = memmap_request.response;
 
     // ── Register system services (OpenRC-style) ──────────────────────────────
     svc_register("pamiec-fizyczna",    "Menedzer pamieci fizycznej (PMM)",     svc_pmm,        true);
