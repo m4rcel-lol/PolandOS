@@ -97,20 +97,21 @@ iso: $(TARGET)
 	    $(MAKE) -C limine || \
 	    (echo "  Blad kompilacji Limine" && exit 1); \
 	fi
-	@# Create directory structure
+	@# Clean and create directory structure
+	rm -rf iso_root
 	mkdir -p iso_root/boot/limine
 	mkdir -p iso_root/EFI/BOOT
 	@# Copy kernel
 	cp $(TARGET) iso_root/boot/polandos.elf
-	@# Copy Limine config
-	cp limine.conf iso_root/boot/limine/limine.conf
+	@# Copy Limine config (Limine v7 uses limine.cfg)
+	cp limine.cfg iso_root/boot/limine/limine.cfg
 	@# Copy Limine BIOS/UEFI files
 	cp limine/limine-bios.sys      iso_root/boot/limine/
 	cp limine/limine-bios-cd.bin   iso_root/boot/limine/
 	cp limine/limine-uefi-cd.bin   iso_root/boot/limine/
 	cp limine/BOOTX64.EFI          iso_root/EFI/BOOT/BOOTX64.EFI
-	@# Build ISO
-	xorriso -as mkisofs \
+	@# Build ISO (Rock Ridge for proper filesystem traversal)
+	xorriso -as mkisofs -R \
 	    -b boot/limine/limine-bios-cd.bin \
 	    -no-emul-boot -boot-load-size 4 -boot-info-table \
 	    --efi-boot boot/limine/limine-uefi-cd.bin \

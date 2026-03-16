@@ -19,8 +19,10 @@ SECTIONS {
     __kernel_start = .;
 
     .limine_requests : {
+        KEEP(*(.limine_requests_start))
         KEEP(*(.limine_requests))
         KEEP(*(.limine_reqs))
+        KEEP(*(.limine_requests_end))
     } :text
 
     .text ALIGN(0x1000) : {

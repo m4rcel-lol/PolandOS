@@ -8,9 +8,7 @@ nvme.img
 limine/
 
 # ISO staging dir (populated during build)
-iso_root/boot/limine/
-iso_root/EFI/
-iso_root/boot/polandos.elf
+iso_root/
 
 # Editor/IDE
 .vscode/
