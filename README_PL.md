@@ -195,21 +195,21 @@ Powłoka obsługuje:
 
 ## CI / GitHub Actions
 
-PolandOS zawiera workflow GitHub Actions, ktory automatycznie buduje jadro (ELF) oraz bootowalny obraz ISO przy kazdym pushu i pull requeście do galezi `main`.
+PolandOS zawiera workflow GitHub Actions, który automatycznie buduje jądro (ELF) oraz bootowalny obraz ISO przy każdym pushu i pull requeście do gałęzi `main`.
 
-### Reczne uruchamianie budowania
+### Ręczne uruchamianie budowania
 
-1. Wejdz w zakladke **Actions** w repozytorium na GitHubie.
+1. Wejdź w zakładkę **Actions** w repozytorium na GitHubie.
 2. Wybierz workflow **Build PolandOS** z bocznego panelu.
-3. Kliknij **Run workflow** → wybierz galaz → **Run workflow**.
+3. Kliknij **Run workflow** → wybierz gałąź → **Run workflow**.
 
-### Pobieranie artefaktow
+### Pobieranie artefaktów
 
-Po zakonczeniu workflow:
+Po zakończeniu workflow:
 
-1. Otworz ukonczony workflow run w zakladce **Actions**.
-2. Przewin do sekcji **Artifacts** na dole podsumowania.
-3. Pobierz **polandos.iso** (bootowalny ISO) lub **polandos.elf** (samo jadro).
+1. Otwórz ukończony workflow run w zakładce **Actions**.
+2. Przewiń do sekcji **Artifacts** na dole podsumowania.
+3. Pobierz **polandos.iso** (bootowalny ISO) lub **polandos.elf** (samo jądro).
 
 ### Uruchamianie pobranego ISO
 
@@ -225,7 +225,7 @@ qemu-system-x86_64 \
     -no-reboot
 ```
 
-Lub nagraj na pendrive USB i uruchom na prawdziwym sprzecie — patrz **Nagrywanie na pendrive** powyzej.
+Lub nagraj na pendrive USB i uruchom na prawdziwym sprzęcie — patrz **Nagrywanie na pendrive** powyżej.
 
 ## Prawa autorskie
 
