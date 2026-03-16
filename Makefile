@@ -53,6 +53,7 @@ KERNEL_SRCS := \
     kernel/shell/shell.c \
     kernel/services/service.c \
     kernel/installer/installer.c \
+    kernel/lang/polskiscript.c \
     kernel/lib/string.c \
     kernel/lib/printf.c \
     kernel/lib/panic.c
