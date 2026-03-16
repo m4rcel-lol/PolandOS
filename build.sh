@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# PolandOS — Build script for Arch Linux / CachyOS
-# Installs dependencies via pacman and builds the bootable ISO.
+# PolandOS — Build script
+# Installs dependencies and builds the kernel / bootable ISO.
 #
 # Usage:
 #   ./build.sh              # install deps + build bootable ISO
+#   ./build.sh all          # install deps + build kernel ELF only
+#   ./build.sh iso          # install deps + build bootable ISO
 #   ./build.sh clean        # clean build artifacts
 #   ./build.sh deps         # only install dependencies
 #
+# Supports Arch Linux / CachyOS (pacman) and Ubuntu / Debian (apt).
 # On Arch x86_64 the native GCC is used (no cross-compiler needed).
 
 set -euo pipefail
@@ -24,35 +27,65 @@ error() { echo -e "${RED}[BLAD]${NC}  $*"; }
 
 # ─── Detect distro ──────────────────────────────────────────────────────────
 
-if ! command -v pacman &>/dev/null; then
-    error "pacman not found — this script is for Arch Linux / CachyOS."
-    error "On Ubuntu/Debian use: sudo apt install nasm xorriso curl"
+USE_PACMAN=false
+USE_APT=false
+
+if command -v pacman &>/dev/null; then
+    USE_PACMAN=true
+elif command -v apt-get &>/dev/null; then
+    USE_APT=true
+else
+    error "Neither pacman nor apt-get found."
+    error "Install manually: gcc (or gcc-x86_64-linux-gnu), binutils (or binutils-x86_64-linux-gnu), nasm, xorriso, curl, make"
     exit 1
 fi
 
 # ─── Required packages ──────────────────────────────────────────────────────
 
-# base-devel : gcc, make, ld, binutils, etc.
-# nasm       : assembler for x86_64
-# xorriso    : ISO image creation
-# curl       : downloading Limine bootloader
-
-PACKAGES_BUILD=(base-devel nasm xorriso curl)
-
 install_deps() {
-    local needed=()
+    if $USE_PACMAN; then
+        # base-devel : gcc, make, ld, binutils, etc.
+        # nasm       : assembler for x86_64
+        # xorriso    : ISO image creation
+        # curl       : downloading Limine bootloader
+        local packages=(base-devel nasm xorriso curl)
+        local needed=()
 
-    for pkg in "${PACKAGES_BUILD[@]}"; do
-        if ! pacman -Qi "$pkg" &>/dev/null; then
-            needed+=("$pkg")
+        for pkg in "${packages[@]}"; do
+            if ! pacman -Qi "$pkg" &>/dev/null; then
+                needed+=("$pkg")
+            fi
+        done
+
+        if [[ ${#needed[@]} -gt 0 ]]; then
+            warn "The following packages will be installed: ${needed[*]}"
+            sudo pacman -S --needed "${needed[@]}"
+        else
+            info "All required packages are already installed."
         fi
-    done
+    elif $USE_APT; then
+        # gcc-x86-64-linux-gnu      : cross-compiler
+        # binutils-x86-64-linux-gnu : cross-linker (x86_64-linux-gnu-ld)
+        # nasm                      : assembler for x86_64
+        # xorriso                   : ISO image creation
+        # curl                      : downloading Limine bootloader
+        # make                      : build tool
+        local packages=(gcc-x86-64-linux-gnu binutils-x86-64-linux-gnu nasm xorriso curl make)
+        local needed=()
 
-    if [[ ${#needed[@]} -gt 0 ]]; then
-        warn "The following packages will be installed: ${needed[*]}"
-        sudo pacman -S --needed "${needed[@]}"
-    else
-        info "All required packages are already installed."
+        for pkg in "${packages[@]}"; do
+            if ! dpkg -s "$pkg" &>/dev/null 2>&1; then
+                needed+=("$pkg")
+            fi
+        done
+
+        if [[ ${#needed[@]} -gt 0 ]]; then
+            warn "The following packages will be installed: ${needed[*]}"
+            sudo apt-get update -qq
+            sudo apt-get install -y "${needed[@]}"
+        else
+            info "All required packages are already installed."
+        fi
     fi
 }
 
@@ -72,11 +105,11 @@ case "$TARGET" in
         install_deps
         exit 0
         ;;
-    iso)
+    all|iso)
         ;;
     *)
         error "Unknown target: $TARGET"
-        echo "Usage: $0 [iso|clean|deps]"
+        echo "Usage: $0 [all|iso|clean|deps]"
         exit 1
         ;;
 esac
@@ -86,10 +119,19 @@ install_deps
 
 # On Arch x86_64 the native GCC works — set CROSS to empty string so the
 # Makefile uses 'gcc' and 'ld' instead of 'x86_64-linux-gnu-gcc' etc.
-MAKE_ARGS=(CROSS=)
+# On Debian/Ubuntu the cross-compiler packages are used (default CROSS prefix).
+MAKE_ARGS=()
+if $USE_PACMAN; then
+    MAKE_ARGS=(CROSS=)
+fi
 
-# Build the bootable ISO
-info "Building bootable ISO..."
-make "${MAKE_ARGS[@]}" iso
-
-info "Done! Bootable ISO: polandos.iso"
+# Build
+if [[ "$TARGET" == "all" ]]; then
+    info "Building kernel ELF..."
+    make "${MAKE_ARGS[@]}" all
+    info "Done! Kernel ELF: polandos.elf"
+else
+    info "Building bootable ISO..."
+    make "${MAKE_ARGS[@]}" iso
+    info "Done! Bootable ISO: polandos.iso"
+fi
