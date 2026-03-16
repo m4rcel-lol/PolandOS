@@ -40,7 +40,7 @@ fi
 
 # ─── Ensure required tools ──────────────────────────────────────────────────
 
-for cmd in dd lsblk; do
+for cmd in dd lsblk wipefs; do
     if ! command -v "$cmd" &>/dev/null; then
         error "Required command '$cmd' not found."
         exit 1
@@ -70,7 +70,15 @@ if [[ ! -f "$ISO" ]]; then
     fi
 fi
 
+ISO_SIZE=$(stat -c%s "$ISO")
 info "ISO found: $ISO ($(du -h "$ISO" | cut -f1))"
+
+# Sanity-check: a valid bootable ISO must be at least 1 MB
+if (( ISO_SIZE < 1048576 )); then
+    error "ISO is too small ($(du -h "$ISO" | cut -f1)) — it is likely corrupt or incomplete."
+    error "Try rebuilding: ./build.sh clean && ./build.sh iso"
+    exit 1
+fi
 
 # ─── List removable USB devices ─────────────────────────────────────────────
 
@@ -169,15 +177,55 @@ for part in "${DEVICE}"*; do
     fi
 done
 
+# ─── Wipe old partition tables and signatures ───────────────────────────────
+
+info "Wiping old partition tables and filesystem signatures on $DEVICE..."
+
+# Remove all filesystem/partition-table signatures (GPT, MBR, ext, NTFS, …)
+wipefs -a -f "$DEVICE"
+
+# Zero out the first 4 MiB (MBR, GPT header, old boot sectors)
+dd if=/dev/zero of="$DEVICE" bs=1M count=4 status=none conv=notrunc
+
+# Zero out the last 4 MiB (GPT backup header at end of disk)
+DEVICE_SIZE=$(blockdev --getsize64 "$DEVICE")
+if (( DEVICE_SIZE > 4194304 )); then
+    TAIL_SKIP=$(( (DEVICE_SIZE - 4194304) / 1048576 ))
+    dd if=/dev/zero of="$DEVICE" bs=1M seek="$TAIL_SKIP" status=none conv=notrunc 2>/dev/null || true
+fi
+
+info "Device wiped."
+
 # ─── Burn ISO ────────────────────────────────────────────────────────────────
 
-info "Burning $ISO to $DEVICE..."
-dd if="$ISO" of="$DEVICE" bs=4M status=progress oflag=sync conv=fsync
+info "Burning $ISO ($((ISO_SIZE / 1048576)) MiB) to $DEVICE — this may take a while..."
+dd if="$ISO" of="$DEVICE" bs=4M status=progress conv=fsync
 
-# ─── Sync and finish ────────────────────────────────────────────────────────
+# ─── Sync and verify ────────────────────────────────────────────────────────
 
 info "Syncing buffers..."
 sync
+
+# Tell the kernel to re-read the partition table
+info "Re-reading partition table..."
+if command -v partprobe &>/dev/null; then
+    partprobe "$DEVICE" 2>/dev/null || true
+else
+    blockdev --rereadpt "$DEVICE" 2>/dev/null || true
+fi
+
+# Basic verification: compare the first bytes of the ISO with the device
+info "Verifying burn..."
+ISO_HASH=$(dd if="$ISO" bs=1M count=1 status=none | md5sum | awk '{print $1}')
+DEV_HASH=$(dd if="$DEVICE" bs=1M count=1 status=none | md5sum | awk '{print $1}')
+
+if [[ "$ISO_HASH" != "$DEV_HASH" ]]; then
+    error "Verification FAILED! The first 1 MiB of the device does not match the ISO."
+    error "Try a different USB drive or USB port."
+    exit 1
+fi
+
+info "Verification OK — data matches."
 
 echo ""
 info "PolandOS has been burned to $DEVICE!"
