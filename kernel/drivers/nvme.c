@@ -225,6 +225,11 @@ int nvme_init(void) {
             pdev->vendor_id, pdev->device_id,
             pdev->bus, pdev->slot, pdev->func);
 
+    if (pdev->bar[0] & 1) {
+        kprintf("[BLAD] NVMe: BAR0 jest typu I/O (oczekiwano MMIO)\n");
+        return -1;
+    }
+
     pci_enable_busmaster(pdev->bus, pdev->slot, pdev->func);
 
     u64 bar0 = pci_get_bar_addr(pdev->bus, pdev->slot, pdev->func, 0);
