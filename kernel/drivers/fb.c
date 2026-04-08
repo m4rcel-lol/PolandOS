@@ -145,6 +145,13 @@ static u32 fb_width  = 0;
 static u32 fb_height = 0;
 static u32 fb_pitch  = 0;
 static u16 fb_bpp    = 0;
+static u8  fb_red_mask_size   = 8;
+static u8  fb_red_mask_shift  = 16;
+static u8  fb_green_mask_size = 8;
+static u8  fb_green_mask_shift = 8;
+static u8  fb_blue_mask_size  = 8;
+static u8  fb_blue_mask_shift = 0;
+static u8  fb_bytes_per_pixel = 4;
 
 static u32 cursor_x  = 0;
 static u32 cursor_y  = 0;
@@ -155,17 +162,61 @@ static u32 cols = 0; // text columns
 static u32 rows = 0; // text rows
 
 // ─── Pixel operations ─────────────────────────────────────────────────────────
+static inline u32 mask_for_size(u8 bits) {
+    if (bits == 0) return 0;
+    if (bits >= 32) return 0xFFFFFFFFu;
+    return (1u << bits) - 1u;
+}
+
+static inline u32 scale_8_to_n(u32 c8, u8 bits) {
+    u32 maxv = mask_for_size(bits);
+    if (maxv == 0) return 0;
+    if (maxv == 255) return c8;
+    return (c8 * maxv + 127u) / 255u;
+}
+
+static inline u32 pack_color(u32 rgb) {
+    u32 r = (rgb >> 16) & 0xFFu;
+    u32 g = (rgb >> 8) & 0xFFu;
+    u32 b = rgb & 0xFFu;
+
+    u32 pr = scale_8_to_n(r, fb_red_mask_size)   << fb_red_mask_shift;
+    u32 pg = scale_8_to_n(g, fb_green_mask_size) << fb_green_mask_shift;
+    u32 pb = scale_8_to_n(b, fb_blue_mask_size)  << fb_blue_mask_shift;
+    return pr | pg | pb;
+}
+
 void fb_putpixel(u32 x, u32 y, u32 color) {
     if (!fb_addr || x >= fb_width || y >= fb_height) return;
-    u32 *pixel = (u32 *)(fb_addr + (u64)y * fb_pitch + (u64)x * 4);
-    *pixel = color;
+    u8 *pixel = (u8 *)(fb_addr + (u64)y * fb_pitch + (u64)x * fb_bytes_per_pixel);
+    u32 packed = pack_color(color);
+    for (u8 i = 0; i < fb_bytes_per_pixel; i++) {
+        pixel[i] = (u8)(packed >> (8u * i));
+    }
 }
 
 void fb_fill_rect(u32 x, u32 y, u32 w, u32 h, u32 color) {
-    for (u32 row = y; row < y + h && row < fb_height; row++) {
-        u32 *line = (u32 *)(fb_addr + (u64)row * fb_pitch + (u64)x * 4);
-        for (u32 col = 0; col < w && (x + col) < fb_width; col++)
-            line[col] = color;
+    if (!fb_addr) return;
+
+    u32 y_end = (y + h < fb_height) ? (y + h) : fb_height;
+    u32 x_end = (x + w < fb_width) ? (x + w) : fb_width;
+    if (x >= x_end || y >= y_end) return;
+
+    if (fb_bytes_per_pixel == 4) {
+        u32 packed = pack_color(color);
+        for (u32 row = y; row < y_end; row++) {
+            u32 *line = (u32 *)(fb_addr + (u64)row * fb_pitch + (u64)x * 4);
+            for (u32 col = x; col < x_end; col++) {
+                line[col - x] = packed;
+            }
+        }
+        return;
+    }
+
+    for (u32 row = y; row < y_end; row++) {
+        for (u32 col = x; col < x_end; col++) {
+            fb_putpixel(col, row, color);
+        }
     }
 }
 
@@ -177,12 +228,34 @@ void fb_clear(u32 color) {
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
-void fb_init(u64 addr, u32 width, u32 height, u32 pitch, u16 bpp) {
+void fb_init(u64 addr, u32 width, u32 height, u32 pitch, u16 bpp,
+             u8 red_mask_size, u8 red_mask_shift,
+             u8 green_mask_size, u8 green_mask_shift,
+             u8 blue_mask_size, u8 blue_mask_shift) {
     fb_addr   = addr;
     fb_width  = width;
     fb_height = height;
     fb_pitch  = pitch;
     fb_bpp    = bpp;
+    fb_bytes_per_pixel = (u8)((bpp + 7) / 8);
+    if (fb_bytes_per_pixel == 0) fb_bytes_per_pixel = 1;
+    if (fb_bytes_per_pixel > 4) fb_bytes_per_pixel = 4;
+
+    fb_red_mask_size    = red_mask_size;
+    fb_red_mask_shift   = red_mask_shift;
+    fb_green_mask_size  = green_mask_size;
+    fb_green_mask_shift = green_mask_shift;
+    fb_blue_mask_size   = blue_mask_size;
+    fb_blue_mask_shift  = blue_mask_shift;
+
+    if (fb_red_mask_size == 0 && fb_green_mask_size == 0 && fb_blue_mask_size == 0) {
+        // Conservative fallback for firmware that does not report masks.
+        fb_red_mask_size = fb_green_mask_size = fb_blue_mask_size = 8;
+        fb_red_mask_shift = 16;
+        fb_green_mask_shift = 8;
+        fb_blue_mask_shift = 0;
+    }
+
     cols = width  / FONT_W;
     rows = height / FONT_H;
     fb_clear(FB_BLACK);
