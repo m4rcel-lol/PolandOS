@@ -2,6 +2,7 @@
 // Konsola tekstowa z przewijaniem, obsługa kolorów
 #include "fb.h"
 #include "../lib/string.h"
+#include "../lib/printf.h"
 
 // ─── Embedded 8×16 VGA-style font (ASCII 0x00–0x7F) ─────────────────────────
 // Each character: 16 bytes, 1 byte per row, bit 7 = leftmost pixel
@@ -172,6 +173,7 @@ static inline u32 scale_8_to_n(u32 c8, u8 bits) {
     u32 maxv = mask_for_size(bits);
     if (maxv == 0) return 0;
     if (maxv == 255) return c8;
+    // Round to nearest when converting 8-bit channel to N-bit channel.
     return (c8 * maxv + 127u) / 255u;
 }
 
@@ -238,8 +240,14 @@ void fb_init(u64 addr, u32 width, u32 height, u32 pitch, u16 bpp,
     fb_pitch  = pitch;
     fb_bpp    = bpp;
     fb_bytes_per_pixel = (u8)((bpp + 7) / 8);
-    if (fb_bytes_per_pixel == 0) fb_bytes_per_pixel = 1;
-    if (fb_bytes_per_pixel > 4) fb_bytes_per_pixel = 4;
+    if (fb_bytes_per_pixel == 0) {
+        kprintf("[BLAD] FB: nieprawidlowe bpp=0, wymuszam 1 bajt/piksel\n");
+        fb_bytes_per_pixel = 1;
+    }
+    if (fb_bytes_per_pixel > 4) {
+        kprintf("[BLAD] FB: nieobslugiwane bpp=%u, ograniczam do 32bpp zapisu\n", bpp);
+        fb_bytes_per_pixel = 4;
+    }
 
     fb_red_mask_size    = red_mask_size;
     fb_red_mask_shift   = red_mask_shift;
@@ -249,11 +257,23 @@ void fb_init(u64 addr, u32 width, u32 height, u32 pitch, u16 bpp,
     fb_blue_mask_shift  = blue_mask_shift;
 
     if (fb_red_mask_size == 0 && fb_green_mask_size == 0 && fb_blue_mask_size == 0) {
-        // Conservative fallback for firmware that does not report masks.
-        fb_red_mask_size = fb_green_mask_size = fb_blue_mask_size = 8;
-        fb_red_mask_shift = 16;
-        fb_green_mask_shift = 8;
-        fb_blue_mask_shift = 0;
+        // Fallback based on common packed-pixel layouts when masks are not reported.
+        if (bpp <= 16) {
+            // RGB565
+            fb_red_mask_size = 5;
+            fb_red_mask_shift = 11;
+            fb_green_mask_size = 6;
+            fb_green_mask_shift = 5;
+            fb_blue_mask_size = 5;
+            fb_blue_mask_shift = 0;
+        } else {
+            // 24/32bpp RGB888-style
+            fb_red_mask_size = fb_green_mask_size = fb_blue_mask_size = 8;
+            fb_red_mask_shift = 16;
+            fb_green_mask_shift = 8;
+            fb_blue_mask_shift = 0;
+        }
+        kprintf("[INFO] FB: brak masek, uzywam domyslnego mapowania dla %ubpp\n", bpp);
     }
 
     cols = width  / FONT_W;
