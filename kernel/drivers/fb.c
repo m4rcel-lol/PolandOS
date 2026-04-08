@@ -139,6 +139,7 @@ const u8 font_data[128][16] = {
 
 #define FONT_W   8
 #define FONT_H   16
+#define FB_BPP_RGB565_MAX 16
 
 // ─── Console state ────────────────────────────────────────────────────────────
 static u64 fb_addr   = 0;
@@ -200,8 +201,10 @@ void fb_putpixel(u32 x, u32 y, u32 color) {
 void fb_fill_rect(u32 x, u32 y, u32 w, u32 h, u32 color) {
     if (!fb_addr) return;
 
-    u32 y_end = (y + h < fb_height) ? (y + h) : fb_height;
-    u32 x_end = (x + w < fb_width) ? (x + w) : fb_width;
+    u64 x_end64 = (u64)x + (u64)w;
+    u64 y_end64 = (u64)y + (u64)h;
+    u32 y_end = (y_end64 < (u64)fb_height) ? (u32)y_end64 : fb_height;
+    u32 x_end = (x_end64 < (u64)fb_width) ? (u32)x_end64 : fb_width;
     if (x >= x_end || y >= y_end) return;
 
     if (fb_bytes_per_pixel == 4) {
@@ -258,7 +261,7 @@ void fb_init(u64 addr, u32 width, u32 height, u32 pitch, u16 bpp,
 
     if (fb_red_mask_size == 0 && fb_green_mask_size == 0 && fb_blue_mask_size == 0) {
         // Fallback based on common packed-pixel layouts when masks are not reported.
-        if (bpp <= 16) {
+        if (bpp <= FB_BPP_RGB565_MAX) {
             // RGB565
             fb_red_mask_size = 5;
             fb_red_mask_shift = 11;
