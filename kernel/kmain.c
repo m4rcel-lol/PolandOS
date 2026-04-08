@@ -241,7 +241,13 @@ void kmain(void)
             (u32)fb->width,
             (u32)fb->height,
             (u32)fb->pitch,
-            fb->bpp);
+            fb->bpp,
+            fb->red_mask_size,
+            fb->red_mask_shift,
+            fb->green_mask_size,
+            fb->green_mask_shift,
+            fb->blue_mask_size,
+            fb->blue_mask_shift);
     kprintf("[DOBRZE] Framebuffer: %ux%u %ubpp\n",
             (u32)fb->width, (u32)fb->height, fb->bpp);
 

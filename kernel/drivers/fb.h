@@ -21,9 +21,18 @@ typedef struct {
     u32 height;
     u32 pitch;
     u16 bpp;
+    u8  red_mask_size;
+    u8  red_mask_shift;
+    u8  green_mask_size;
+    u8  green_mask_shift;
+    u8  blue_mask_size;
+    u8  blue_mask_shift;
 } Framebuffer;
 
-void fb_init(u64 addr, u32 width, u32 height, u32 pitch, u16 bpp);
+void fb_init(u64 addr, u32 width, u32 height, u32 pitch, u16 bpp,
+             u8 red_mask_size, u8 red_mask_shift,
+             u8 green_mask_size, u8 green_mask_shift,
+             u8 blue_mask_size, u8 blue_mask_shift);
 void fb_putpixel(u32 x, u32 y, u32 color);
 void fb_fill_rect(u32 x, u32 y, u32 w, u32 h, u32 color);
 void fb_putchar(char c);
