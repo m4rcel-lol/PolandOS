@@ -133,7 +133,9 @@ u64 pci_get_bar_addr(u8 bus, u8 slot, u8 func, u8 bar_idx) {
     if (bar_type == 2 && bar_idx < 5) {
         // 64-bit MMIO BAR
         u32 bar_hi = pci_read32(bus, slot, func, (u8)(bar_off + 4));
-        return ((u64)bar_hi << 32) | (bar_lo & 0xFFFFFFF0);
+        u64 addr = ((u64)bar_hi << 32) | (bar_lo & 0xFFFFFFF0u);
+        // Keep only architecturally valid physical address bits (x86_64 max 52-bit).
+        return addr & 0x000FFFFFFFFFFFF0ULL;
     }
 
     // 32-bit MMIO BAR
