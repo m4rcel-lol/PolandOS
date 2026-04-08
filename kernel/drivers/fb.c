@@ -261,7 +261,7 @@ void fb_init(u64 addr, u32 width, u32 height, u32 pitch, u16 bpp,
 
     if (fb_red_mask_size == 0 && fb_green_mask_size == 0 && fb_blue_mask_size == 0) {
         // Fallback based on common packed-pixel layouts when masks are not reported.
-        if (bpp <= FB_BPP_RGB565_THRESHOLD) {
+        if (bpp == FB_BPP_RGB565_THRESHOLD) {
             // RGB565
             fb_red_mask_size = 5;
             fb_red_mask_shift = 11;
